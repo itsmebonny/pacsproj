@@ -104,7 +104,7 @@ model.mesh.generate()
 
 # Write mesh data:
 gmsh.option.setNumber("Mesh.MshFileVersion",2.2)
-gmsh.write(f"data/mesh/DD.msh")
+gmsh.write(f"data/mesh/bifurcation.msh")
 
 # Creates graphical user interface
 #if 'close' not in sys.argv:
