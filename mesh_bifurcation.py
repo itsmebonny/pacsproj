@@ -5,7 +5,7 @@ gmsh.initialize()
 
 # Create a new model
 model = gmsh.model
-lc = 1
+lc = 0.1
 points = []
 inlet = []
 interface = []
@@ -34,7 +34,7 @@ face = model.geo.addCurveLoop([inlet[0], walls[0], outlet[0], outlet[1],walls[1]
 faces.append(face)
 model.geo.addPlaneSurface([face])
 
-def add_bifurcation(model,interface,outlet,faces,point1_tag,point2_tag, mid_point_tag, drop,points):
+def add_bifurcation(model,interface,outlet,faces,point1_tag,point2_tag, mid_point_tag, drop,points,walls):
 
     interface.append(outlet[-2])
     interface.append(outlet[-1])
@@ -84,9 +84,12 @@ def add_bifurcation(model,interface,outlet,faces,point1_tag,point2_tag, mid_poin
     points += points_right[2:]
     model.geo.synchronize()
 
+    walls += walls_left
+    walls += walls_right
+
     
-add_bifurcation(model,interface,outlet,faces,points[2],points[4],points[3],8,points)
-add_bifurcation(model,interface,outlet,faces,points[8],points[10],points[9],8,points)
+add_bifurcation(model,interface,outlet,faces,points[2],points[4],points[3],8,points,walls)
+#add_bifurcation(model,interface,outlet,faces,points[8],points[10],points[9],8,points,walls)
 
 # #physical group
 model.addPhysicalGroup(1, inlet, 1) 
