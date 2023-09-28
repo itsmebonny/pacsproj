@@ -49,6 +49,7 @@ gmsh.model.addPhysicalGroup(1, list_lines_x, 5) # horizontal
 gmsh.model.addPhysicalGroup(1, [list_lines_y[0],list_lines_y[-1]], 6) # extreme edges
 gmsh.model.addPhysicalGroup(1, list_lines_y[1:-1], 7) # interfaces
 #gmsh.model.addPhysicalGroup(1, list_lines_y[2:-1:2], 8) # right interfaces
+
 gmsh.model.addPhysicalGroup(2, faces, 8)
 
 # Create the relevant Gmsh data structures from Gmsh model.

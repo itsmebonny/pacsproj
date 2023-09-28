@@ -26,7 +26,9 @@ def solve_stokes(fd,mesh):
     (v, q) = TestFunctions(W)
     f = Constant((0, 0))
 
-    Re = Constant(5*36/0.035)
+    Re1 = Constant(5*36/0.035)
+    Re2 = Constant(32226)
+    Re = Expression('(x[0] < 0) ? Re1 : Re2',Re1=Re1,Re2=Re2,degree=1)
     delta = 1
     a = (1/Re)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx 
     L = inner(f,v+ delta*grad(q))*dx #+inner(g,v)*ds # in case of emergency: + delta*grad(q)
