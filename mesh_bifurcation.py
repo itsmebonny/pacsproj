@@ -95,9 +95,13 @@ add_bifurcation(model,interface,outlet,faces,points[8],points[10],points[9],8,po
 model.addPhysicalGroup(1, inlet, 1) 
 model.addPhysicalGroup(1, walls, 2) 
 model.addPhysicalGroup(1, outlet, 3) 
-model.addPhysicalGroup(2, faces, 4)
 for i in range(len(interface)):
-    model.addPhysicalGroup(1, [interface[i]], i+5)
+    model.addPhysicalGroup(1, [interface[i]], i+4)
+k = len(interface)+4
+print(k)
+
+for j in range(len(faces)):
+    model.addPhysicalGroup(2, [faces[j]], j+k)
 
 # Create the relevant Gmsh data structures from Gmsh model.
 model.geo.synchronize()
