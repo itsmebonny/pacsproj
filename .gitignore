@@ -1,0 +1,3 @@
+data/mesh/*
+__pycache__
+.vscode
