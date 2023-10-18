@@ -26,11 +26,11 @@ class MeshLoader:
                     self.rename_faces.array()[self.face.array()==i] = i
 
     def measure_definition(self):
-        dS = Measure("dS",domain=self.mesh, subdomain_data=self.rename_boundaries)
-        ds = Measure("ds",domain=self.mesh, subdomain_data=self.rename_boundaries)
-        dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)
+        self.dS = Measure("dS",domain=self.mesh, subdomain_data=self.rename_boundaries)
+        self.ds = Measure("ds",domain=self.mesh, subdomain_data=self.rename_boundaries)
+        self.dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)
 
-        return dS, ds, dx
+        return self.dS, self.ds, self.dx
 
             
 class Solver(ABC):
@@ -163,3 +163,17 @@ class Heat(Solver):
         plt.colorbar(sol)
         plt.show()
            
+
+class DataGenerator:
+    
+    def __init__(self, solutions, mesh):
+        self.solutions = solutions
+        self.mesh = mesh
+        self.n = FacetNormal(self.mesh.mesh)
+        self.h = self.mesh.mesh.hmin()
+        #da pensare come gestire più soluzioni se vuoi pensarci
+
+    def flux(self):
+        flux = dot(self.solutions, self.n('+'))*self.mesh.ds(1)
+        total_flux = assemble(flux)
+        
