@@ -105,8 +105,12 @@ class NavierStokes(Solver):
         return u,p
 
     def plot_solution(self):
-        plot(self.u) 
-        plot(self.p)
+        vel = plot(self.u, title = 'Velocity')
+        plt.colorbar(vel)
+        plt.show()
+        pres = plot(self.p, title = 'Pressure')
+        plt.colorbar(pres)
+        plt.show()
         
 
 class Heat(Solver):
@@ -164,16 +168,36 @@ class Heat(Solver):
         plt.show()
            
 
-class DataGenerator:
+class DataGenerator(ABC):
     
-    def __init__(self, solutions, mesh):
-        self.solutions = solutions
+    def __init__(self, solver, mesh):
+        self.solver = solver
         self.mesh = mesh
         self.n = FacetNormal(self.mesh.mesh)
         self.h = self.mesh.mesh.hmin()
         #da pensare come gestire più soluzioni se vuoi pensarci
 
+    @abstractmethod
     def flux(self):
-        flux = dot(self.solutions, self.n('+'))*self.mesh.ds(1)
+        pass
+
+class DataNS(DataGenerator):
+
+    def __init__(self, solver, mesh):
+        super().__init__(solver, mesh)
+
+    def flux(self,interface):
+        flux = dot(self.solver.u, self.n('+'))*self.mesh.dS(interface)
         total_flux = assemble(flux)
+        return total_flux
+    
+class DataHeat(DataGenerator):
+
+    def __init__(self, solver, mesh):
+        super().__init__(solver, mesh)
+
+    def flux(self,interface):
+        flux = -dot(grad(self.solver.u)('+'), self.n('+'))*self.mesh.dS(interface)
+        total_flux = assemble(flux)
+        return total_flux
         
