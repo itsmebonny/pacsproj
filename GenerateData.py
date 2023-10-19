@@ -57,13 +57,19 @@ class NavierStokes(Solver):
         super().__init__(mesh, equation)
         self.V = VectorElement("P", self.mesh.mesh.ufl_cell(), 2)
         self.Q = FiniteElement("P", self.mesh.mesh.ufl_cell(), 1)
-        self.Re = 5*36/0.035
-        self.inflow = Expression(("0.0", " -( 0.5 * x[0] * x[0] + 8.0) "), degree=2)
+        self.rho = 1*1e3
+        self.mu = 4*1e-3
+        self.U0 = 0.1
+        self.L0 = 0.01
+        self.inflow = Expression(("0.0", " -( 0.25 * x[0] * x[0] + 9.0) "), degree=2)
 
-    def set_parameters(self,Re,V,Q,inflow):
-        self.Re = Re
+    def set_parameters(self,V,Q,rho,mu,U0,L0,inflow):
         self.V = V
         self.Q = Q
+        self.rho = rho
+        self.mu = mu
+        self.U0 = U0
+        self.L0 = L0
         self.inflow = inflow
 
     # potremmo creare solve CG e solve DG
@@ -83,33 +89,28 @@ class NavierStokes(Solver):
         for i in self.mesh.tags['outlet']:
             bcs.append(DirichletBC(W.sub(1), Constant(0.0), self.mesh.bounds, i))
 
-        # Collect boundary condition
-        #bcs = [bc0, bc1, bc_outlet]
-
         # Define variational problem
         (u, p) = TrialFunctions(W)
         (v, q) = TestFunctions(W)
         f = Constant((0, 0))
 
-        delta = 1
-        a = (1/self.Re)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx 
-        L = inner(f,v+ delta*grad(q))*dx 
+        Re = Constant(self.rho * self.U0 * self.L0 / self.mu)
+        a = (1/Re)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx 
+        L = inner(f,v)*dx 
 
         U = Function(W)
-        solve(a == L, U, bcs,solver_parameters={"linear_solver": "mumps"})
+        solve(a == L, U, bcs)
         u, p = U.split()
 
-        self.u = u
-        self.p = p
-
-        return u,p
+        self.u = u*self.U0
+        self.p = p*self.rho*self.U0*self.U0
 
     def plot_solution(self):
         vel = plot(self.u, title = 'Velocity')
-        plt.colorbar(vel)
+        plt.colorbar(vel,label='m/s')
         plt.show()
         pres = plot(self.p, title = 'Pressure')
-        plt.colorbar(pres)
+        plt.colorbar(pres,label='Pa')
         plt.show()
         
 
@@ -118,16 +119,24 @@ class Heat(Solver):
     def __init__(self, mesh, equation):
         super().__init__(mesh, equation)
         self.V = FunctionSpace(self.mesh.mesh,"CG",1)
+        self.k = Constant(1.0)
         self.f = Constant(12 - 2 - 2*30)
         self.bc = Expression('1+x[0]*x[0]+30*x[1]*x[1]+12*t',t=0,degree=2)
+        self.u0 = self.bc
         self.dt = Constant(0.3)
         self.T = 1.8
 
+    # exact solution u(x,y,t) = 1 + x^2 + alpha*y^2 + beta*t
+    # source f(x,y,t) = beta - 2 - 2*alpha
+    # alpha = 30, beta = 12
+    # bcs are the exact solution at time t
 
-    def set_parameters(self,V,f,bc,dt,T):
+    def set_parameters(self,V,k,f,bc,u0,dt,T):
         self.V = V
+        self.k = k
         self.f = f
         self.bc = bc
+        self.u0 = u0
         self.dt = dt
         self.T = T
         
@@ -135,13 +144,13 @@ class Heat(Solver):
     # potremmo creare solve CG e solve DG
     def solve(self):
         t=float(self.dt)
-        u0 =interpolate(self.bc,self.V)
+        u0 =interpolate(self.u0,self.V)
         U = Function(self.V)
 
         #Variationalproblemateachtime
         u=TrialFunction(self.V)
         v=TestFunction(self.V)
-        a_int=u*v*dx+self.dt*inner(grad(u),grad(v))*dx 
+        a_int=u*v*dx+self.dt*self.k*inner(grad(u),grad(v))*dx 
         #a_facet = 10/avg(h)*dot(jump(v,n),jump(u,n))*dS - dot(avg(grad(v)), jump(u, n))*dS - dot(jump(u, n), avg(grad(v)))*dS
         a = a_int # + a_facet
         L=u0*v*dx+self.dt*self.f*v*dx
