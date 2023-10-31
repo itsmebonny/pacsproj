@@ -51,7 +51,7 @@ class Solver(ABC):
     def plot_solution(self):
         pass 
 
-class NavierStokes(Solver):
+class Stokes(Solver):
 
     def __init__(self, mesh, equation):
         super().__init__(mesh, equation)
@@ -99,6 +99,7 @@ class NavierStokes(Solver):
         L = inner(f,v)*dx 
 
         U = Function(W)
+
         solve(a == L, U, bcs)
         u, p = U.split()
 
@@ -143,8 +144,8 @@ class Heat(Solver):
 
     # potremmo creare solve CG e solve DG
     def solve(self):
-        t=float(self.dt)
-        u0 =interpolate(self.u0,self.V)
+        t = float(self.dt)
+        u0 = interpolate(self.u0,self.V)
         U = Function(self.V)
 
         #Variationalproblemateachtime
@@ -200,6 +201,12 @@ class DataNS(DataGenerator):
         total_flux = assemble(flux)
         return total_flux
     
+    def mean_pressure(self,interface):
+        mean_p = self.solver.p*self.mesh.dS(interface)
+        length = assemble(Constant(1.0)*self.mesh.dS(interface))
+        mean_p = assemble(flux)
+        return mean_p/length
+    
 class DataHeat(DataGenerator):
 
     def __init__(self, solver, mesh):
@@ -209,4 +216,12 @@ class DataHeat(DataGenerator):
         flux = -dot(grad(self.solver.u)('+'), self.n('+'))*self.mesh.dS(interface)
         total_flux = assemble(flux)
         return total_flux
+    
+    def mean_temp(self,domain):
+        mean_temp = self.solver.u*self.mesh.dx(domain)
+        area = assemble(Constant(1.0)*self.mesh.dx(domain))
+        mean_temp = assemble(mean_temp)
+        return mean_temp/area
+    
+
         

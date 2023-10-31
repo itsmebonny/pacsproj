@@ -7,10 +7,11 @@ gmsh.initialize()
 model = gmsh.model
 lc = 1
 points = []
+#center_points = []
 for i in range(5):
     points += [gmsh.model.geo.addPoint(i*5, 0, 0, lc)]
+    #center_points += [gmsh.model.geo.addPoint(i*5, 2.5, 0, lc)]
     points += [gmsh.model.geo.addPoint(i*5, 5, 0, lc)]
-
 
 # Define the rectangle coordinates
 print(points)
@@ -18,11 +19,6 @@ print(points)
 # Add the rectangle to the model
 list_lines_x=[]
 list_lines_y = []
-# for i in range(n-1):   
-#     list_lines.append(gmsh.model.geo.add_line(points[i], points[i+1]))
-# list_lines.append(gmsh.model.geo.add_line(points[n-1], points[0]))
-# spline = gmsh.model.geo.add_spline( points )
-# list_lines.append(spline)
 for i in range(len(points)-2):
     if i % 2 == 0:
         list_lines_x.append(gmsh.model.geo.addLine( points[i], points[i+2] ))
@@ -46,15 +42,14 @@ for i in range(0,len(list_lines_x)-1,2):
 
 #physical group
 gmsh.model.addPhysicalGroup(1, list_lines_x, 5) # horizontal
-gmsh.model.addPhysicalGroup(1, [list_lines_y[0],list_lines_y[-1]], 6) # extreme edges
-gmsh.model.addPhysicalGroup(1, list_lines_y[1:-1], 7) # interfaces
-#gmsh.model.addPhysicalGroup(1, list_lines_y[2:-1:2], 8) # right interfaces
-for i in range(len(faces)):
-    gmsh.model.addPhysicalGroup(2, [faces[i]], 8+i)
-print(faces)
-# Create the relevant Gmsh data structures from Gmsh model.
-gmsh.model.geo.synchronize()
+gmsh.model.addPhysicalGroup(1, [list_lines_y[0]], 6) # left wall
+gmsh.model.addPhysicalGroup(1, [list_lines_y[-1]], 7) # right wall
+for i in range(1,len(list_lines_y)-1): # interfaces
+    model.addPhysicalGroup(1, [list_lines_y[i]], i+7)
+for i in range(len(faces)): # faces
+    gmsh.model.addPhysicalGroup(2, [faces[i]], i+11)
 
+gmsh.model.geo.synchronize()
 # Generate mesh:
 gmsh.model.mesh.generate()
 
@@ -68,3 +63,5 @@ gmsh.fltk.run()
 
 # It finalize the Gmsh API
 gmsh.finalize()
+
+
