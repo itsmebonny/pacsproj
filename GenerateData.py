@@ -157,8 +157,10 @@ class Heat(Solver):
         L=u0*v*dx+self.dt*self.f*v*dx
 
         bcs = []
-        for i in self.mesh.tags['walls']:
-            bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
+        tags_list = ['walls','inlet','outlet']
+        for j in tags_list:
+            for i in self.mesh.tags[j]:
+                bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
 
 
         while(t<=self.T):
@@ -191,6 +193,23 @@ class DataGenerator(ABC):
     def flux(self):
         pass
 
+    def centerline(self):
+        center_line = []
+        tags_list = ['inlet','interface','outlet']
+        for j in tags_list:
+            for i in self.mesh.tags[j]:
+                edge_coord =[]
+                for edge in edges(self.mesh.mesh):
+                    if self.mesh.bounds.array()[edge.index()] == i:
+                        for vertex in vertices(edge):
+                           coordinate = vertex.point().array()
+                           edge_coord.append(coordinate)
+
+                edge_coord = np.array(edge_coord)
+                center_line.append([(np.max(edge_coord[:,0])+np.min(edge_coord[:,0]))/2,(np.max(edge_coord[:,1])+np.min(edge_coord[:,1]))/2])
+        self.center_line = center_line
+        return center_line
+
 class DataNS(DataGenerator):
 
     def __init__(self, solver, mesh):
@@ -207,6 +226,10 @@ class DataNS(DataGenerator):
         mean_p = assemble(flux)
         return mean_p/length
     
+    def centerline(self):
+        return super().centerline()
+
+    
 class DataHeat(DataGenerator):
 
     def __init__(self, solver, mesh):
@@ -217,11 +240,35 @@ class DataHeat(DataGenerator):
         total_flux = assemble(flux)
         return total_flux
     
+    def boundary_flux(self,tag):
+        flux = -dot(grad(self.solver.u), self.n)*self.mesh.ds(tag)
+        total_flux = assemble(flux)
+        return total_flux
+    
     def mean_temp(self,domain):
         mean_temp = self.solver.u*self.mesh.dx(domain)
         area = assemble(Constant(1.0)*self.mesh.dx(domain))
         mean_temp = assemble(mean_temp)
         return mean_temp/area
     
+    def centerline(self):
+        return super().centerline()
+    
+    def nodes_data(self):
+        dict = {'flux':[],'NodeId':[]}
+        for i in self.mesh.tags['inlet']:
+            dict['flux'].append(self.boundary_flux(i))
+        for i in self.mesh.tags['interface']:
+            dict['flux'].append(self.flux(i))
+        for i in self.mesh.tags['outlet']:
+            dict['flux'].append(self.boundary_flux(i))
+        for j in range(len(self.center_line)):
+            dict['NodeId'].append(j)
+        self.NodesData = dict
+        return dict
+    
+    def create_edges(self):
+        self.edges1 = self.NodesData['NodeId'][:-1]
+        self.edges2 = self.NodesData['NodeId'][1:]
 
-        
+        return self.edges1,self.edges2
