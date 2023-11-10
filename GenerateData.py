@@ -162,13 +162,16 @@ class Heat(Solver):
             for i in self.mesh.tags[j]:
                 bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
 
-
+        self.ut = []
+        self.ts = []
         while(t<=self.T):
             #Solve
             self.bc.t=t
             solve(a==L,U,bcs)
             #Update
             u0.assign(U)
+            self.ut.append[U]
+            self.ts.append(t)
             t+=float(self.dt)
 
         self.u = U
@@ -235,18 +238,18 @@ class DataHeat(DataGenerator):
     def __init__(self, solver, mesh):
         super().__init__(solver, mesh)
 
-    def flux(self,interface):
-        flux = -dot(grad(self.solver.u)('+'), self.n('+'))*self.mesh.dS(interface)
+    def flux(self,interface, u):
+        flux = -dot(grad(u)('+'), self.n('+'))*self.mesh.dS(interface)
         total_flux = assemble(flux)
         return total_flux
     
-    def boundary_flux(self,tag):
-        flux = -dot(grad(self.solver.u), self.n)*self.mesh.ds(tag)
+    def boundary_flux(self,tag, u):
+        flux = -dot(grad(u), self.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
     
-    def mean_temp(self,domain):
-        mean_temp = self.solver.u*self.mesh.dx(domain)
+    def mean_temp(self,domain, u):
+        mean_temp = u*self.mesh.dx(domain)
         area = assemble(Constant(1.0)*self.mesh.dx(domain))
         mean_temp = assemble(mean_temp)
         return mean_temp/area
@@ -255,15 +258,17 @@ class DataHeat(DataGenerator):
         return super().centerline()
     
     def nodes_data(self):
-        dict = {'flux':[],'NodeId':[]}
-        for i in self.mesh.tags['inlet']:
-            dict['flux'].append(self.boundary_flux(i))
-        for i in self.mesh.tags['interface']:
-            dict['flux'].append(self.flux(i))
-        for i in self.mesh.tags['outlet']:
-            dict['flux'].append(self.boundary_flux(i))
+        dict = {'NodeId':[]}
+        for t in self.solver.ts:
+            dict[f'flux_{t}'] = []
+            for i in self.mesh.tags['inlet']:
+                dict[f'flux_{t}'].append(self.boundary_flux(i))
+            for i in self.mesh.tags['interface']:
+                dict[f'flux_{t}'].append(self.flux(i))
+            for i in self.mesh.tags['outlet']:
+                dict[f'flux_{t}'].append(self.boundary_flux(i))
         for j in range(len(self.center_line)):
-            dict['NodeId'].append(j)
+                dict['NodeId'].append(j)
         self.NodesData = dict
         return dict
     
