@@ -120,12 +120,12 @@ class Heat(Solver):
     def __init__(self, mesh, equation):
         super().__init__(mesh, equation)
         self.V = FunctionSpace(self.mesh.mesh,"CG",1)
-        self.k = Constant(1.0)
-        self.f = Constant(12 - 2 - 2*30)
-        self.bc = Expression('1+x[0]*x[0]+30*x[1]*x[1]+12*t',t=0,degree=2)
+        self.k = Constant(1000.0)
+        self.f = Constant(12 - 2 - 2*3000)
+        self.bc = Expression('1+x[0]*x[0]+3000*x[1]*x[1]+12*t',t=0,degree=2)
         self.u0 = self.bc
-        self.dt = Constant(0.3)
-        self.T = 1.8
+        self.dt = Constant(30)
+        self.T = 100
 
     # exact solution u(x,y,t) = 1 + x^2 + alpha*y^2 + beta*t
     # source f(x,y,t) = beta - 2 - 2*alpha
@@ -166,13 +166,16 @@ class Heat(Solver):
         self.ts = []
         while(t<=self.T):
             #Solve
+            self.ut.append(u0)
             self.bc.t=t
             solve(a==L,U,bcs)
             #Update
             u0.assign(U)
-            self.ut.append[U]
             self.ts.append(t)
             t+=float(self.dt)
+            sol= plot(U)
+            plt.colorbar(sol)
+            plt.show()
 
         self.u = U
 
@@ -259,18 +262,21 @@ class DataHeat(DataGenerator):
     
     def nodes_data(self):
         dict = {'NodeId':[]}
-        for t in self.solver.ts:
-            dict[f'flux_{t}'] = []
+        td_dict = {}
+        for t in range(len(self.solver.ts)):
+            td_dict[self.solver.ts[t]] = []
             for i in self.mesh.tags['inlet']:
-                dict[f'flux_{t}'].append(self.boundary_flux(i))
+                td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
             for i in self.mesh.tags['interface']:
-                dict[f'flux_{t}'].append(self.flux(i))
+                td_dict[self.solver.ts[t]].append(self.flux(i,self.solver.ut[t]))
             for i in self.mesh.tags['outlet']:
-                dict[f'flux_{t}'].append(self.boundary_flux(i))
+                td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
         for j in range(len(self.center_line)):
                 dict['NodeId'].append(j)
         self.NodesData = dict
-        return dict
+        self.TDNodesData = td_dict
+        return dict, td_dict
+    
     
     def create_edges(self):
         self.edges1 = self.NodesData['NodeId'][:-1]
