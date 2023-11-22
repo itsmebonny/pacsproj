@@ -2,6 +2,7 @@ from dolfin import *
 import numpy as np
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
+import GenerateGraph as gg
 
 class MeshLoader:
 
@@ -117,22 +118,8 @@ class Stokes(Solver):
 
 class Heat(Solver):
 
-    def __init__(self, mesh, equation):
+    def __init__(self, mesh, equation, V, k, f, bc, u0, dt, T, Neumann=False):
         super().__init__(mesh, equation)
-        self.V = FunctionSpace(self.mesh.mesh,"CG",1)
-        self.k = Constant(1000.0)
-        self.f = Constant(12 - 2 - 2*3000)
-        self.bc = Expression('1+x[0]*x[0]+3000*x[1]*x[1]+12*t',t=0,degree=2)
-        self.u0 = self.bc
-        self.dt = Constant(30)
-        self.T = 100
-
-    # exact solution u(x,y,t) = 1 + x^2 + alpha*y^2 + beta*t
-    # source f(x,y,t) = beta - 2 - 2*alpha
-    # alpha = 30, beta = 12
-    # bcs are the exact solution at time t
-
-    def set_parameters(self,V,k,f,bc,u0,dt,T):
         self.V = V
         self.k = k
         self.f = f
@@ -140,10 +127,26 @@ class Heat(Solver):
         self.u0 = u0
         self.dt = dt
         self.T = T
+        self.Neumann = Neumann
+    # exact solution u(x,y,t) = 1 + x^2 + alpha*y^2 + beta*t
+    # source f(x,y,t) = beta - 2 - 2*alpha
+    # alpha = 30, beta = 12
+    # bcs are the exact solution at time t
+
+    def set_parameters(self,V,k,f,bc,u0,dt,T, Neumann=False):
+        self.V = V
+        self.k = k
+        self.f = f
+        self.bc = bc
+        self.u0 = u0
+        self.dt = dt
+        self.T = T
+        self.Neumann = Neumann
         
 
-    # potremmo creare solve CG e solve DG
+    # potremmo creare solve CG e solve ops
     def solve(self):
+        set_log_level(False)
         t = float(self.dt)
         u0 = interpolate(self.u0,self.V)
         U = Function(self.V)
@@ -157,25 +160,28 @@ class Heat(Solver):
         L=u0*v*dx+self.dt*self.f*v*dx
 
         bcs = []
-        tags_list = ['walls','inlet','outlet']
-        for j in tags_list:
-            for i in self.mesh.tags[j]:
-                bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
+        if not self.Neumann:
+            tags_list = ['walls','inlet','outlet']
+            for j in tags_list:
+                for i in self.mesh.tags[j]:
+                    bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
 
         self.ut = []
         self.ts = []
         while(t<=self.T):
-            #Solve
-            self.ut.append(u0)
+            #Solve creare una Function() e assegnare il vettore u0 con .vector()[:]
+            temp = Function(self.V)
+            temp.vector()[:] = u0.vector()[:]
+            self.ut.append(temp)
             self.bc.t=t
             solve(a==L,U,bcs)
             #Update
             u0.assign(U)
             self.ts.append(t)
             t+=float(self.dt)
-            sol= plot(U)
-            plt.colorbar(sol)
-            plt.show()
+            #sol= plot(U)
+            #plt.colorbar(sol)
+            #plt.show()
 
         self.u = U
 
@@ -261,25 +267,41 @@ class DataHeat(DataGenerator):
         return super().centerline()
     
     def nodes_data(self):
-        dict = {'NodeId':[]}
+        if not hasattr(self, 'center_line'):
+            self.centerline()
+        dict = {'k' : [], 'NodeId':[]}
         td_dict = {}
         for t in range(len(self.solver.ts)):
+            
             td_dict[self.solver.ts[t]] = []
             for i in self.mesh.tags['inlet']:
                 td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
+                #print(t, self.solver.ut[t].vector().get_local()-self.solver.ut[0].vector().get_local())
             for i in self.mesh.tags['interface']:
                 td_dict[self.solver.ts[t]].append(self.flux(i,self.solver.ut[t]))
             for i in self.mesh.tags['outlet']:
                 td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
         for j in range(len(self.center_line)):
                 dict['NodeId'].append(j)
+                dict['k'].append(self.solver.k)
         self.NodesData = dict
         self.TDNodesData = td_dict
         return dict, td_dict
     
     
     def create_edges(self):
+        if not hasattr(self, 'NodesData'):
+            self.nodes_data()
         self.edges1 = self.NodesData['NodeId'][:-1]
         self.edges2 = self.NodesData['NodeId'][1:]
 
         return self.edges1,self.edges2
+    def save_graph(self):
+        if not hasattr(self, 'TDNodesData'):
+            self.nodes_data()
+        if not hasattr(self, 'edges1'):
+            self.create_edges()
+        self.graph = gg.generate_graph(self.NodesData, self.center_line, self.edges1, self.edges2)
+        gg.add_field(self.graph, self.TDNodesData, "flux")
+        gg.save_graph(self.graph, f"k_{self.solver.k}")
+        return self.graph

@@ -37,9 +37,8 @@ def generate_graph(point_data, points, edges1, edges2):
     edges2 = np.concatenate((edges2, edges1_copy))
 
     graph = dgl.graph((edges1, edges2), idtype=th.int32)
-
+    graph.ndata["k"] = th.tensor(point_data['k'], dtype=th.float32)
     graph.ndata["x"] = th.tensor(points, dtype=th.float32)
-    # graph.ndata["flux"] = th.tensor(point_data['flux'], dtype=th.float32)
     graph.ndata["NodeId"] = th.tensor(point_data['NodeId'], dtype=th.float32)
 
     return graph
@@ -83,3 +82,16 @@ def add_field(graph, field, field_name, offset=0):
     graph.ndata["T"] = th.reshape(
         th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1)
     )
+def save_graph(graph, filename):
+    """
+    Save graph to disk.
+
+    Save graph to disk as a DGL graph.
+
+    Arguments:
+        graph: DGL graph
+        output_dir (string): path to output directory
+    """
+    output_dir = "data/graphs/"
+    dgl.save_graphs(output_dir+filename+".grph", graph)
+    print("Graph saved to disk.")
