@@ -3,7 +3,7 @@ import torch as th
 import GenerateData as gd
 import numpy as np
 
-def generate_graph(point_data, points, edges1, edges2):
+def generate_graph(point_data, points, edges_data, edges1, edges2):
     """
     Generate graph.
 
@@ -32,15 +32,18 @@ def generate_graph(point_data, points, edges1, edges2):
 
     indices = {"inlet": inlet, "outlets": outlets}
 
-    edges1_copy = edges1.copy()
-    edges1 = np.concatenate((edges1, edges2))
-    edges2 = np.concatenate((edges2, edges1_copy))
-
     graph = dgl.graph((edges1, edges2), idtype=th.int32)
-    graph.ndata["k"] = th.tensor(point_data['k'], dtype=th.float32)
+    k = max(point_data['k'])
+    area = max(edges_data['area'])
+    length = max(edges_data['length'])
     graph.ndata["x"] = th.tensor(points, dtype=th.float32)
+    graph.ndata["k"] = th.reshape(th.ones(graph.num_nodes(), dtype=th.float32) * k, (-1, 1, 1))
     graph.ndata["NodeId"] = th.tensor(point_data['NodeId'], dtype=th.float32)
-
+    graph.ndata["inlet_mask"] = th.tensor(point_data['inlet_mask'], dtype=th.float32)
+    graph.ndata["outlet_mask"] = th.tensor(point_data['outlet_mask'], dtype=th.float32)
+    graph.edata["EdgeId"] = th.tensor(edges_data['edgeId'], dtype=th.float32)
+    graph.edata["area"] = th.reshape(th.ones(graph.num_edges(), dtype=th.float32) * area, (-1, 1, 1))
+    graph.edata["length"] = th.reshape(th.ones(graph.num_edges(), dtype=th.float32) * length, (-1, 1, 1))
     return graph
 
 
@@ -74,15 +77,24 @@ def add_field(graph, field, field_name, offset=0):
     for i, t in enumerate(times):
         f = th.tensor(field[t], dtype=th.float32)
         field_t[:, 0, i] = f
-
-    graph.ndata[field_name] = field_t
-    graph.ndata["dt"] = th.reshape(
-        th.ones(graph.num_nodes(), dtype=th.float32) * dt, (-1, 1, 1)
-    )
-    graph.ndata["T"] = th.reshape(
-        th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1)
-    )
-def save_graph(graph, filename):
+    if field_name == "flux":
+        graph.ndata[field_name] = field_t
+        graph.ndata["dt"] = th.reshape(
+            th.ones(graph.num_nodes(), dtype=th.float32) * dt, (-1, 1, 1)
+        )
+        graph.ndata["T"] = th.reshape(
+            th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1)
+        )
+        
+    elif field_name == "mean_temp":
+        graph.edata[field_name] = field_t
+        graph.edata["dt"] = th.reshape(
+            th.ones(graph.num_edges(), dtype=th.float32) * dt, (-1, 1, 1)
+        )
+        graph.edata["T"] = th.reshape(
+            th.ones(graph.num_edges(), dtype=th.float32) * T, (-1, 1, 1)
+        )
+def save_graph(graph, filename, output_dir = "data/graphs/"):
     """
     Save graph to disk.
 
@@ -92,6 +104,6 @@ def save_graph(graph, filename):
         graph: DGL graph
         output_dir (string): path to output directory
     """
-    output_dir = "data/graphs/"
+    
     dgl.save_graphs(output_dir+filename+".grph", graph)
     print("Graph saved to disk.")

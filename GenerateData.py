@@ -3,6 +3,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 import GenerateGraph as gg
+import torch as th
 
 class MeshLoader:
 
@@ -261,7 +262,7 @@ class DataHeat(DataGenerator):
         mean_temp = u*self.mesh.dx(domain)
         area = assemble(Constant(1.0)*self.mesh.dx(domain))
         mean_temp = assemble(mean_temp)
-        return mean_temp/area
+        return area
     
     def centerline(self):
         return super().centerline()
@@ -269,7 +270,7 @@ class DataHeat(DataGenerator):
     def nodes_data(self):
         if not hasattr(self, 'center_line'):
             self.centerline()
-        dict = {'k' : [], 'NodeId':[]}
+        dict = {'k' : [], 'NodeId':[], 'inlet_mask':[], 'outlet_mask':[]}
         td_dict = {}
         for t in range(len(self.solver.ts)):
             
@@ -283,25 +284,51 @@ class DataHeat(DataGenerator):
                 td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
         for j in range(len(self.center_line)):
                 dict['NodeId'].append(j)
+                if j == 0:
+                    dict['inlet_mask'].append(1)
+                    dict['outlet_mask'].append(0)
+                elif j == len(self.center_line)-1:
+                    dict['inlet_mask'].append(0)
+                    dict['outlet_mask'].append(1)
+                else:
+                    dict['inlet_mask'].append(0)
+                    dict['outlet_mask'].append(0)
                 dict['k'].append(self.solver.k)
         self.NodesData = dict
         self.TDNodesData = td_dict
         return dict, td_dict
     
+    def edges_data(self):
+        if not hasattr(self, 'NodesData'):
+            self.nodes_data()
+        dict_e = {'edgeId':[], 'area':[], 'length':[]}
+        td_dict_e = {}
+        for i in range(len(self.NodesData['NodeId'])-1):
+            dict_e['edgeId'].append(i)
+        
+        for i in self.mesh.tags['faces']:
+            dict_e['area'].append(self.mean_temp(i,self.solver.ut[0]))
+            dict_e['length'].append(5.0)
+        self.EdgesData = dict_e
+        self.TDEdgesData = td_dict_e
+        return dict_e, td_dict_e
     
     def create_edges(self):
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
         self.edges1 = self.NodesData['NodeId'][:-1]
         self.edges2 = self.NodesData['NodeId'][1:]
-
         return self.edges1,self.edges2
-    def save_graph(self):
+    def save_graph(self, output_dir = "data/graphs/"):
         if not hasattr(self, 'TDNodesData'):
             self.nodes_data()
         if not hasattr(self, 'edges1'):
             self.create_edges()
-        self.graph = gg.generate_graph(self.NodesData, self.center_line, self.edges1, self.edges2)
+        if not hasattr(self, 'center_line'):
+            self.centerline()
+        if not hasattr(self, 'TDEdgesData'):
+            self.edges_data()
+        self.graph = gg.generate_graph(self.NodesData, self.center_line, self.EdgesData, self.edges1, self.edges2)
         gg.add_field(self.graph, self.TDNodesData, "flux")
-        gg.save_graph(self.graph, f"k_{self.solver.k}")
+        gg.save_graph(self.graph, f"k_{self.solver.k}", output_dir)
         return self.graph
