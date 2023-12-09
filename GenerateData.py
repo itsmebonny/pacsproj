@@ -147,7 +147,7 @@ class Heat(Solver):
 
     # potremmo creare solve CG e solve ops
     def solve(self):
-        set_log_level(False)
+        #set_log_level(False)
         t = float(self.dt)
         u0 = interpolate(self.u0,self.V)
         U = Function(self.V)
@@ -155,9 +155,11 @@ class Heat(Solver):
         #Variationalproblemateachtime
         u=TrialFunction(self.V)
         v=TestFunction(self.V)
+        h = self.mesh.mesh.hmin()
+        n = FacetNormal(self.mesh.mesh)
         a_int=u*v*dx+self.dt*self.k*inner(grad(u),grad(v))*dx 
-        #a_facet = 10/avg(h)*dot(jump(v,n),jump(u,n))*dS - dot(avg(grad(v)), jump(u, n))*dS - dot(jump(u, n), avg(grad(v)))*dS
-        a = a_int # + a_facet
+        a_facet = self.k*(10/avg(h)*dot(jump(v,n),jump(u,n))*dS - dot(avg(grad(v)), jump(u, n))*dS - dot(jump(u, n), avg(grad(v)))*dS)
+        a = a_int + a_facet
         L=u0*v*dx+self.dt*self.f*v*dx
 
         bcs = []
@@ -180,9 +182,10 @@ class Heat(Solver):
             u0.assign(U)
             self.ts.append(t)
             t+=float(self.dt)
-            #sol= plot(U)
-            #plt.colorbar(sol)
-            #plt.show()
+            if t % 10 == 0:
+                sol= plot(U)
+                plt.colorbar(sol)
+                plt.show()
 
         self.u = U
 
@@ -249,12 +252,17 @@ class DataHeat(DataGenerator):
         super().__init__(solver, mesh)
 
     def flux(self,interface, u):
-        flux = -dot(grad(u)('+'), self.n('+'))*self.mesh.dS(interface)
+        flux = -self.solver.k*dot(grad(u)('+'), self.n('+'))*self.mesh.dS(interface)
         total_flux = assemble(flux)
         return total_flux
     
-    def boundary_flux(self,tag, u):
-        flux = -dot(grad(u), self.n)*self.mesh.ds(tag)
+    def inlet_flux(self,tag, u):
+        flux = self.solver.k*dot(grad(u), self.n)*self.mesh.ds(tag)
+        total_flux = assemble(flux)
+        return total_flux
+    
+    def outlet_flux(self,tag, u):
+        flux = -self.solver.k*dot(grad(u), self.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
     
@@ -270,18 +278,18 @@ class DataHeat(DataGenerator):
     def nodes_data(self):
         if not hasattr(self, 'center_line'):
             self.centerline()
-        dict = {'k' : [], 'NodeId':[], 'inlet_mask':[], 'outlet_mask':[]}
+        dict = {'k' : [], 'NodeId':[], 'inlet_mask':[], 'outlet_mask':[], 'interface_length': []}
         td_dict = {}
         for t in range(len(self.solver.ts)):
             
             td_dict[self.solver.ts[t]] = []
             for i in self.mesh.tags['inlet']:
-                td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
+                td_dict[self.solver.ts[t]].append(self.inlet_flux(i,self.solver.ut[t]))
                 #print(t, self.solver.ut[t].vector().get_local()-self.solver.ut[0].vector().get_local())
             for i in self.mesh.tags['interface']:
                 td_dict[self.solver.ts[t]].append(self.flux(i,self.solver.ut[t]))
             for i in self.mesh.tags['outlet']:
-                td_dict[self.solver.ts[t]].append(self.boundary_flux(i,self.solver.ut[t]))
+                td_dict[self.solver.ts[t]].append(self.outlet_flux(i,self.solver.ut[t]))
         for j in range(len(self.center_line)):
                 dict['NodeId'].append(j)
                 if j == 0:
@@ -294,6 +302,7 @@ class DataHeat(DataGenerator):
                     dict['inlet_mask'].append(0)
                     dict['outlet_mask'].append(0)
                 dict['k'].append(self.solver.k)
+                dict['interface_length'].append(5.0)
         self.NodesData = dict
         self.TDNodesData = td_dict
         return dict, td_dict
