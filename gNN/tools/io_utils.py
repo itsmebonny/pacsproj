@@ -32,9 +32,10 @@ def data_location():
         Location of the data (string)
 
     """
-    if not os.path.exists(os.getcwd() + '/data_location.txt'):
-        return '/home/bonni/Documents/pacs/pacsproj/data/'
-    f = open(os.getcwd() + '/data_location.txt', 'r')
+    print(os.getcwd())
+    if not os.path.exists(os.getcwd() + '/gNN/tools/data_location.txt'):
+        return '.'
+    f = open(os.getcwd() + '/gNN/tools/data_location.txt', 'r')
     location = f.readline().strip()
     f.close()
     return location + '/'

@@ -20,7 +20,7 @@
 
 import sys
 import os
-sys.path.append(os.getcwd())
+sys.path.append(os.getcwd() + '/gNN')
 import argparse
 import time
 import tools.io_utils as io
@@ -498,7 +498,7 @@ def parse_command_line_arguments():
 
     parser.add_argument('--bs', help='batch size', type=int, default=32)
     parser.add_argument('--epochs', help='total number of epochs', type=int,
-                        default=100)
+                        default=5)
     parser.add_argument('--lr_decay', help='learning rate decay', type=float,
                         default=0.001)
     parser.add_argument('--lr', help='learning rate', type=float, default=0.001)
@@ -509,13 +509,13 @@ def parse_command_line_arguments():
     parser.add_argument('--weight_decay', help='l2 regularization', 
                         type=float, default=1e-5)
     parser.add_argument('--ls_gnn', help='latent size gnn', type=int,
-                        default=16)
+                        default=8)
     parser.add_argument('--ls_mlp', help='latent size mlps', type=int,
-                        default=16)
+                        default=8)
     parser.add_argument('--process_iterations', help='gnn layers', type=int,
-                        default=5)
-    parser.add_argument('--hl_mlp', help='hidden layers mlps', type=int,
                         default=3)
+    parser.add_argument('--hl_mlp', help='hidden layers mlps', type=int,
+                        default=2)
     parser.add_argument('--label_norm', help='0: min_max, 1: normal, 2: none',
                         type=int, default=0)
     parser.add_argument('--stride', help='stride for multistep training',
@@ -543,7 +543,7 @@ def parse_command_line_arguments():
 
 def get_graphs_params(label_normalization, types_to_keep, 
                       n_graphs_to_keep = -1,
-                      graphs_folder = 'graphs/',
+                      graphs_folder = 'graphs',
                       data_location = io.data_location(),
                       features = None):
     """
@@ -665,14 +665,16 @@ if __name__ == "__main__":
             'x', 
             'flux', 
             'dt',
-            'T']
+            'T',
+            'k',
+            'interface_length']
 
     edges_features = ['area', 'length']
 
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs/', 
+             graphs_folder = 'graphs', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()

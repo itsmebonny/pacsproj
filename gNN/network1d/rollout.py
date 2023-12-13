@@ -142,8 +142,10 @@ def rollout(gnn_model, params, graph, average_branches = False):
 
     """
     gnn_model.eval()
+
+    #print(graph)
     times = graph.ndata['nfeatures'].shape[2]
-    graph = copy.deepcopy(graph)
+    #graph = copy.deepcopy(graph)
     true_graph = copy.deepcopy(graph)
     tfc = true_graph.ndata['nfeatures'].clone()
     graph.ndata['nfeatures'] = tfc[:,:,0].clone()
@@ -151,10 +153,13 @@ def rollout(gnn_model, params, graph, average_branches = False):
 
     r_features = graph.ndata['nfeatures'][:,0:1].unsqueeze(axis = 2).clone()
     start = time.time()
+    #print('tcf',tfc)
+    #print('r_features', r_features)
     for it in range(times-1):
         # set loading variable
         graph.ndata['nfeatures'][:,-1] = tfc[:,-1,it]
         gf = perform_timestep(gnn_model, params, graph, tfc, it + 1)
+        #print('gf',gf)
 
         if average_branches:
             compute_average_branches(graph, gf[:,1])
@@ -163,7 +168,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
         r_features = th.cat((r_features, gf.unsqueeze(axis = 2)), axis = 2)
 
         # set next conditions to exact for debug
-        # graph.ndata['nfeatures'][:,0:2] = tfc[:,0:2,it + 1].clone()
+        # graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
 
     end = time.time()
     tfc = true_graph.ndata['nfeatures'][:,0:1,:].clone()
@@ -200,6 +205,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
     errs = th.sqrt(errs)
     return r_features.detach().numpy(), errs_normalized.detach().numpy(), \
            errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start
+#  r_features.detach().numpy()
 
     
 

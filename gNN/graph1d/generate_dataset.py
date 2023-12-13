@@ -143,7 +143,7 @@ class Dataset(DGLDataset):
         itime = indices[1]
 
         features = self.graphs[igraph].ndata['nfeatures'].clone()
-
+        #print(features)
         nf = features[:,:,itime].clone()
         nfsize = nf[:,:2].shape
         dt = nz.invert_normalize(self.graphs[igraph].ndata['dt'][0], 'dt',

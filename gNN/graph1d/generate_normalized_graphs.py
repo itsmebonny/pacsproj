@@ -115,7 +115,7 @@ def load_graphs(input_dir):
     graphs = {}
     for file in tqdm(files, desc = 'Loading graphs', colour='green'):
         if 'grph' in file:
-            graphs[file] = lg(input_dir + file)[0][0]
+            graphs[file] = lg(input_dir + '/' + file)[0][0]
 
     return graphs
 
@@ -274,18 +274,23 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         ntimes = graph.ndata['flux'].shape[2]
 
         cf = []
-
+        #print(graph.ndata['k'])
         def add_feature(tensor, desired_features, label):
             if label in desired_features:
                 cf.append(tensor)
+                #print(label, tensor)
 
-        # graph.ndata['dt'].repeat(1, 1, ntimes)
+        #graph.ndata['dt'].repeat(1, 1, ntimes)
         add_feature(graph.ndata['dt'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'dt')
         add_feature(graph.ndata['T'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'T')
+        add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
+                    nodes_features, 
+                    'k')
+        
         
         f = graph.ndata['flux'].clone()
         
@@ -313,14 +318,15 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         # add_feature(r2, nodes_features, 'resistance2')
 
         cfeatures = th.cat(cf, axis = 1)
-
+        #print(cfeatures)
         if 'loading' in nodes_features:
             loading = graph.ndata['loading']
             graph.ndata['nfeatures'] = th.cat((f, cfeatures, loading), 
                                                axis = 1)
+            
         else:
             graph.ndata['nfeatures'] = th.cat((f, cfeatures), axis = 1)
-
+        #print('nfeatures', graph.ndata['nfeatures'].shape)
         cf = []
         add_feature(graph.edata['area'], edges_features, 'area')
         add_feature(graph.edata['length'], edges_features, 'length')

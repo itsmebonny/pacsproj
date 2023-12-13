@@ -20,7 +20,7 @@
 
 import sys
 import os
-sys.path.append(os.getcwd())
+sys.path.append(os.getcwd() + '/gNN')
 import torch as th
 import graph1d.generate_normalized_graphs as gng
 import graph1d.generate_dataset as dset
@@ -97,11 +97,12 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     N = len(dataset.graphs)
     graph_n = 10 #np.random.uniform(0,N, 1).astype(int)[0]
     if doplot:
-        node = 0
+        node = 2
         print(graph_n)
         r_features, errs_normalized, \
         errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
         plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
+        print
         plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
         plt.show()
         print(th.max(th.abs(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:])))
@@ -115,8 +116,8 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N, \
            total_time / N, total_timesteps / N
 
-def get_gnn_and_graphs(path, graphs_folder = 'graphs_test/', 
-                       data_location = '/home/bonni/Documents/pacs/pacsproj/data/graphs_test'):
+def get_gnn_and_graphs(path, graphs_folder = 'graphs', 
+                       data_location = '/data/graphs'):
 
     """
     Get GNN and list of graphs given the path to a saved model folder.
@@ -153,7 +154,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_test/',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs/', data_location = '/home/bonni/Documents/pacs/pacsproj/data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 

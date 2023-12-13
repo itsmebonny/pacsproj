@@ -119,30 +119,31 @@ class Stokes(Solver):
 
 class Heat(Solver):
 
-    def __init__(self, mesh, equation, V, k, f, bc, u0, dt, T, Neumann=False):
+    def __init__(self, mesh, equation, V, k, f, u0, dt, T, g,doplot=False):
         super().__init__(mesh, equation)
         self.V = V
         self.k = k
         self.f = f
-        self.bc = bc
+        # self.bc = bc
         self.u0 = u0
         self.dt = dt
         self.T = T
-        self.Neumann = Neumann
+        self.g = g
+        self.doplot = doplot
     # exact solution u(x,y,t) = 1 + x^2 + alpha*y^2 + beta*t
     # source f(x,y,t) = beta - 2 - 2*alpha
     # alpha = 30, beta = 12
     # bcs are the exact solution at time t
 
-    def set_parameters(self,V,k,f,bc,u0,dt,T, Neumann=False):
+    def set_parameters(self,V,k,f,u0,dt,T,g):
         self.V = V
         self.k = k
         self.f = f
-        self.bc = bc
+        # self.bc = bc
         self.u0 = u0
         self.dt = dt
         self.T = T
-        self.Neumann = Neumann
+        self.g = g
         
 
     # potremmo creare solve CG e solve ops
@@ -159,15 +160,16 @@ class Heat(Solver):
         n = FacetNormal(self.mesh.mesh)
         a_int=u*v*dx+self.dt*self.k*inner(grad(u),grad(v))*dx 
         a_facet = self.k*(10/avg(h)*dot(jump(v,n),jump(u,n))*dS - dot(avg(grad(v)), jump(u, n))*dS - dot(jump(u, n), avg(grad(v)))*dS)
+
         a = a_int + a_facet
-        L=u0*v*dx+self.dt*self.f*v*dx
+        L=u0*v*dx+self.dt*self.f*v*dx + self.g*v*self.dt*self.mesh.ds(self.mesh.tags['inlet'][0])
 
         bcs = []
-        if not self.Neumann:
-            tags_list = ['walls','inlet','outlet']
-            for j in tags_list:
-                for i in self.mesh.tags[j]:
-                    bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
+        # if not self.Neumann:
+        #     tags_list = ['walls','inlet','outlet']
+        #     for j in tags_list:
+        #         for i in self.mesh.tags[j]:
+        #             bcs.append(DirichletBC(self.V,self.bc,self.mesh.bounds,i))
 
         self.ut = []
         self.ts = []
@@ -176,13 +178,13 @@ class Heat(Solver):
             temp = Function(self.V)
             temp.vector()[:] = u0.vector()[:]
             self.ut.append(temp)
-            self.bc.t=t
+            self.g.t=t
             solve(a==L,U,bcs)
             #Update
             u0.assign(U)
             self.ts.append(t)
             t+=float(self.dt)
-            if t % 10 == 0:
+            if self.doplot and t % 10 == 0:
                 sol= plot(U)
                 plt.colorbar(sol)
                 plt.show()
