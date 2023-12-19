@@ -68,7 +68,7 @@ def set_next_flowrate(graph, bcs, time_index):
     """
     graph.ndata['next_flowrate'] = bcs[:, 0, time_index] 
 
-def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = False):
+def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
     """
     Performs a single timestep of the rollout phase.
 
@@ -101,7 +101,9 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = False)
             set_boundary_conditions_dirichlet(gf, graph, params, bcs,
                                               time_index)
         elif params['bc_type'] == 'physiological':
-            gf[graph.ndata['inlet_mask'].bool(), 1] = bcs[graph.ndata['inlet_mask'].bool(), 1, time_index]
+            #print(bcs.shape)
+            gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
+            #print(gf[graph.ndata['inlet_mask'].bool(), 1],bcs[graph.ndata['inlet_mask'].bool(), 0, time_index] )
     return gf[:,0:1]
 
 def compute_average_branches(graph, flowrate):
@@ -142,25 +144,22 @@ def rollout(gnn_model, params, graph, average_branches = False):
 
     """
     gnn_model.eval()
-
-    #print(graph)
     times = graph.ndata['nfeatures'].shape[2]
-    #graph = copy.deepcopy(graph)
+    graph = copy.deepcopy(graph)
     true_graph = copy.deepcopy(graph)
     tfc = true_graph.ndata['nfeatures'].clone()
     graph.ndata['nfeatures'] = tfc[:,:,0].clone()
     graph.edata['efeatures'] = true_graph.edata['efeatures'].squeeze().clone()
 
     r_features = graph.ndata['nfeatures'][:,0:1].unsqueeze(axis = 2).clone()
+    #print('tfc', tfc)
     start = time.time()
-    #print('tcf',tfc)
-    #print('r_features', r_features)
     for it in range(times-1):
         # set loading variable
-        graph.ndata['nfeatures'][:,-1] = tfc[:,-1,it]
+        #graph.ndata['nfeatures'][:,-1] = tfc[:,-1,it] # non capisco cosa fa
         gf = perform_timestep(gnn_model, params, graph, tfc, it + 1)
-        #print('gf',gf)
-
+        # print('gf', gf)
+        # print('tfc', tfc[:,0,it+1])
         if average_branches:
             compute_average_branches(graph, gf[:,1])
 
@@ -168,7 +167,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
         r_features = th.cat((r_features, gf.unsqueeze(axis = 2)), axis = 2)
 
         # set next conditions to exact for debug
-        # graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
+        graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
 
     end = time.time()
     tfc = true_graph.ndata['nfeatures'][:,0:1,:].clone()
@@ -205,7 +204,6 @@ def rollout(gnn_model, params, graph, average_branches = False):
     errs = th.sqrt(errs)
     return r_features.detach().numpy(), errs_normalized.detach().numpy(), \
            errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start
-#  r_features.detach().numpy()
 
     
 

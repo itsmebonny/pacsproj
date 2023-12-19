@@ -115,7 +115,7 @@ def load_graphs(input_dir):
     graphs = {}
     for file in tqdm(files, desc = 'Loading graphs', colour='green'):
         if 'grph' in file:
-            graphs[file] = lg(input_dir + '/' + file)[0][0]
+            graphs[file] = lg(input_dir + file)[0][0]
 
     return graphs
 
@@ -260,10 +260,9 @@ def add_features(graphs, nodes_features = None, edges_features = None):
     if nodes_features == None:
         # pressure and flowrate are always included
         nodes_features = [
-            'x', 
             'k',
             'T',
-            'dt']
+            'interface_length']
 
     if edges_features == None:
         edges_features = ['area', 'length']
@@ -274,32 +273,35 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         ntimes = graph.ndata['flux'].shape[2]
 
         cf = []
-        #print(graph.ndata['k'])
+
         def add_feature(tensor, desired_features, label):
             if label in desired_features:
                 cf.append(tensor)
-                #print(label, tensor)
 
-        #graph.ndata['dt'].repeat(1, 1, ntimes)
-        add_feature(graph.ndata['dt'].repeat(1, 1, ntimes), 
-                    nodes_features, 
-                    'dt')
+        # graph.ndata['dt'].repeat(1, 1, ntimes)
+        # add_feature(graph.ndata['dt'].repeat(1, 1, ntimes), 
+        #             nodes_features, 
+        #             'dt')
+        # print(cf)
         add_feature(graph.ndata['T'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'T')
         add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'k')
-        
+        print(graph.ndata['flux'])
+        # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
+        #             nodes_features, 
+        #             'interface_length')
         
         f = graph.ndata['flux'].clone()
         
-        add_feature(th.ones(f.shape[0],1,ntimes) * th.min(f), 
-                    nodes_features, 
-                    'dip')
-        add_feature(th.ones(f.shape[0],1,ntimes) * th.max(f), 
-                    nodes_features, 
-                    'sysp')
+        # add_feature(th.ones(f.shape[0],1,ntimes) * th.min(f), 
+        #             nodes_features, 
+        #             'dip')
+        # add_feature(th.ones(f.shape[0],1,ntimes) * th.max(f), 
+        #             nodes_features, 
+        #             'sysp')
         # questo non serve stai aggiungendo loading 2 volte
         # add_feature(th.zeros(f.shape[0],1,ntimes), 
         #             nodes_features, 
@@ -318,15 +320,14 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         # add_feature(r2, nodes_features, 'resistance2')
 
         cfeatures = th.cat(cf, axis = 1)
-        #print(cfeatures)
+
         if 'loading' in nodes_features:
             loading = graph.ndata['loading']
             graph.ndata['nfeatures'] = th.cat((f, cfeatures, loading), 
                                                axis = 1)
-            
         else:
             graph.ndata['nfeatures'] = th.cat((f, cfeatures), axis = 1)
-        #print('nfeatures', graph.ndata['nfeatures'].shape)
+
         cf = []
         add_feature(graph.edata['area'], edges_features, 'area')
         add_feature(graph.edata['length'], edges_features, 'length')
