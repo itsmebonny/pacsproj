@@ -119,7 +119,7 @@ class Stokes(Solver):
 
 class Heat(Solver):
 
-    def __init__(self, mesh, equation, V, k, f, u0, dt, T, g,doplot=False):
+    def __init__(self, mesh, equation, V, k, f, u0, dt, T, g,doplot=True):
         super().__init__(mesh, equation)
         self.V = V
         self.k = k
@@ -287,9 +287,9 @@ class DataHeat(DataGenerator):
             td_dict[self.solver.ts[t]] = []
             for i in self.mesh.tags['inlet']:
                 td_dict[self.solver.ts[t]].append(self.inlet_flux(i,self.solver.ut[t]))
-                #print(t, self.solver.ut[t].vector().get_local()-self.solver.ut[0].vector().get_local())
+                #print(t, self.solver.ut[t].vector().get_local()-self.solver.ut[0].vector().get_local())   
             for i in self.mesh.tags['interface']:
-                td_dict[self.solver.ts[t]].append(self.flux(i,self.solver.ut[t]))
+                td_dict[self.solver.ts[t]].append(self.flux(i,self.solver.ut[t]))         
             for i in self.mesh.tags['outlet']:
                 td_dict[self.solver.ts[t]].append(self.outlet_flux(i,self.solver.ut[t]))
         for j in range(len(self.center_line)):
@@ -304,7 +304,16 @@ class DataHeat(DataGenerator):
                     dict['inlet_mask'].append(0)
                     dict['outlet_mask'].append(0)
                 dict['k'].append(self.solver.k)
-                dict['interface_length'].append(5.0)
+        for i in self.mesh.tags['inlet']:
+            dict['interface_length'].append(round(assemble(Constant(1.0)*self.mesh.ds(i)),2)) 
+        for i in self.mesh.tags['interface']:
+            dict['interface_length'].append(round(assemble(Constant(1.0)*self.mesh.dS(i)),2))
+            #print(assemble(Constant(1.0)*self.mesh.dS(i)))      
+        for i in self.mesh.tags['outlet']:
+            dict['interface_length'].append(round(assemble(Constant(1.0)*self.mesh.ds(i)),2))  
+
+                
+               # dict['interface_length'].append(5.0)
         self.NodesData = dict
         self.TDNodesData = td_dict
         return dict, td_dict

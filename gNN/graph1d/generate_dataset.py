@@ -79,7 +79,9 @@ class Dataset(DGLDataset):
         offset = 0
         ngraphs = len(self.times)
         stride = self.params['stride']
+        print(self.total_times,stride,ngraphs)
         self.index_map = np.zeros((self.total_times - stride * ngraphs, 2))
+        
         for t in self.times:
             # actual time (minus stride)
             at = t - stride
@@ -117,7 +119,7 @@ class Dataset(DGLDataset):
             self.times.append(graph.ndata['nfeatures'].shape[2])
             self.lightgraphs.append(lightgraph)
 
-        self.times = np.array(self.times)
+        self.times = np.array(self.times, dtype = int)
         self.total_times = np.sum(self.times)
 
         self.create_index_map()
@@ -146,17 +148,17 @@ class Dataset(DGLDataset):
         #print(features)
         nf = features[:,:,itime].clone()
         nfsize = nf[:,:2].shape
-        dt = nz.invert_normalize(self.graphs[igraph].ndata['dt'][0], 'dt',
-                                 self.params['statistics'], 'features')
+        # dt = nz.invert_normalize(self.graphs[igraph].ndata['dt'][0], 'dt',
+        #                          self.params['statistics'], 'features')
 
-        curnoise = np.random.normal(0, self.params['rate_noise'] * dt, nfsize)
-        nf[:,:2] = nf[:,:2] + curnoise
+        # curnoise = np.random.normal(0, self.params['rate_noise'] * dt, nfsize)
+        # nf[:,:2] = nf[:,:2] + curnoise
 
-        fnoise = np.random.normal(0, self.params['rate_noise_features'],
-                                  nf[:,2:].shape)
-        # flowrate at inlet is exact
-        fnoise[self.graphs[igraph].ndata['inlet_mask'].bool(),0] = 0
-        nf[:,2:] = nf[:,2:] + fnoise
+        # fnoise = np.random.normal(0, self.params['rate_noise_features'],
+        #                           nf[:,2:].shape)
+        # # flowrate at inlet is exact
+        # fnoise[self.graphs[igraph].ndata['inlet_mask'].bool(),0] = 0
+        # nf[:,2:] = nf[:,2:] + fnoise
 
         self.lightgraphs[igraph].ndata['nfeatures'] = nf
 
@@ -168,9 +170,9 @@ class Dataset(DGLDataset):
         ef = self.graphs[igraph].edata['efeatures']
 
         # add regular noise to the edge features to prevent overfitting
-        fnoise = np.random.normal(0, self.params['rate_noise_features'],
-                                  ef[:,2:].shape)
-        ef[:,2:] = ef[:,2:] + fnoise
+        # fnoise = np.random.normal(0, self.params['rate_noise_features'],
+        #                           ef[:,2:].shape)
+        # ef[:,2:] = ef[:,2:] + fnoise
         self.lightgraphs[igraph].edata['efeatures'] = ef.squeeze()
 
         return self.lightgraphs[igraph]
@@ -223,8 +225,11 @@ def split(graphs, divs, dataset_info):
     Returns:
         List of groups
     """
+
+
     def chunks(lst, n):
         retlist = [[] for l in range(n)]
+
         for i, el in enumerate(lst):
             retlist[i % n].append(el)
         return retlist
@@ -260,6 +265,7 @@ def split(graphs, divs, dataset_info):
     subsets = {}
     for sublist_n, sublist_v in sublists.items():
         subsets[sublist_n] = list(chunks(sublist_v, divs))
+        print('subset',sublist_n, len(subsets[sublist_n][0]))
         nsets = len(subsets[sublist_n])
         # we distribute the last sets among the first n-1
         if nsets != divs:
@@ -281,8 +287,14 @@ def split(graphs, divs, dataset_info):
         subsets_graph_names[subset_n] = list_all
 
     subsets = subsets_graph_names
-
+    print(subsets['heat_eq'][0])
     datasets = []
+
+    if divs == 1:
+        split_size = int(len(subsets['heat_eq'][0])*0.8)
+        datasets.append({'train': subsets['heat_eq'][0][:split_size],
+                         'test': subsets['heat_eq'][0][split_size:]})
+        return datasets
 
     for i in range(divs):
         cur_set = []
@@ -302,7 +314,7 @@ def split(graphs, divs, dataset_info):
     
     return datasets
 
-def generate_dataset(graphs, params, dataset_info, nchunks = 10):
+def generate_dataset(graphs, params, dataset_info, nchunks = 1):
     """
     Generate a list of datasets
 

@@ -130,7 +130,6 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
         optimizer: a Pytorch optimizer
         print_progress: if True, prints the progress bar during epochs.
         params: dictionary of parameters
-    
     Returns:
         Dictionary containing train results
         Dictionary containing test results
@@ -180,7 +179,7 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
             inmask = batched_graph.ndata['inlet_mask'].bool()
             outmask = batched_graph.ndata['outlet_mask'].bool()
 
-            bccoeff = 100
+            bccoeff = 1
             mask[inmask,0] = mask[inmask,0] * bccoeff
             # flow rate is known
             mask[outmask,0] = mask[outmask,0] * bccoeff
@@ -200,8 +199,8 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
 
                 #c_loss = th.tensor(0.0)
         
-                loss_v = loss_v + coeff * mse(nf, ns[:,:,istride], mask)
-                metric_v = metric_v + coeff * mae(nf, ns[:,:,istride], mask)
+                loss_v = loss_v + coeff * mse(nf, ns[:,:,istride], mask=None)
+                metric_v = metric_v + coeff * mae(nf, ns[:,:,istride], mask=None)
 
             if c_optimizer != None:
                 optimizer.zero_grad()
@@ -224,6 +223,8 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
                 global_loss = global_loss + loss_v
                 global_metric = global_metric + metric_v
                 count = count + 1
+                # if count == 1:
+                    #print(batched_graph.ndata['nfeatures'][:,:])
 
         return {'loss': global_loss / count, 
                 'metric': global_metric / count}
@@ -498,10 +499,10 @@ def parse_command_line_arguments():
 
     parser.add_argument('--bs', help='batch size', type=int, default=32)
     parser.add_argument('--epochs', help='total number of epochs', type=int,
-                        default=10)
+                        default=20)
     parser.add_argument('--lr_decay', help='learning rate decay', type=float,
                         default=0.001)
-    parser.add_argument('--lr', help='learning rate', type=float, default=0.001)
+    parser.add_argument('--lr', help='learning rate', type=float, default=0.01)
     parser.add_argument('--rate_noise', help='rate noise', type=float,
                         default=100)
     parser.add_argument('--rate_noise_features', help='rate noise features', 
@@ -513,13 +514,14 @@ def parse_command_line_arguments():
     parser.add_argument('--ls_mlp', help='latent size mlps', type=int,
                         default=8)
     parser.add_argument('--process_iterations', help='gnn layers', type=int,
-                        default=5)
-    parser.add_argument('--hl_mlp', help='hidden layers mlps', type=int,
                         default=3)
+    parser.add_argument('--hl_mlp', help='hidden layers mlps', type=int,
+                        default=2)
     parser.add_argument('--label_norm', help='0: min_max, 1: normal, 2: none',
-                        type=int, default=1)
+                        type=int, default=0)
     parser.add_argument('--stride', help='stride for multistep training',
-                        type=int, default=1)
+                        type=int, default=5
+                        )
     parser.add_argument('--bcs_gnn', help='path to graph for bcs',
                         type=str, default='models_bcs/31.10.2022_01.35.31')
     args = parser.parse_args()
@@ -566,7 +568,7 @@ def get_graphs_params(label_normalization, types_to_keep,
     """
 
     input_dir = data_location + graphs_folder
-    norm_type = {'features': 'normal', 'labels': label_normalization}
+    norm_type = {'features': 'min_max', 'labels': label_normalization}
     info = json.load(open(input_dir + '/dataset_info.json'))
 
     t2k = types_to_keep
@@ -580,7 +582,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -627,15 +629,16 @@ def training(parallel, rank = 0, graphs_folder = 'graphs/',
 
     params.update(t_params)
 
-    datasets = dset.generate_dataset(graphs, params, info, nchunks = 5)
+    datasets = dset.generate_dataset(graphs, params, info, nchunks = 1)
 
     start = time.time()
     for _, dataset in enumerate(datasets):
+        # print('train', dataset['train'].graph_names)
+        # print('test',dataset['test'].graph_names)
         dataset['test'].graph_names.sort()
         params['train_split'] = dataset['train'].graph_names
         params['test_split'] = dataset['test'].graph_names
         _ = launch_training(dataset, params, parallel)
-
     end = time.time()
     elapsed_time = end - start
 
@@ -666,14 +669,15 @@ if __name__ == "__main__":
             'flux', 
             'dt',
             'T',
-            'k']
+            'k',
+            'interface_length']
 
     edges_features = ['area', 'length']
 
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs/', 
+             graphs_folder = 'graphs_rm/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()

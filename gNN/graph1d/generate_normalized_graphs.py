@@ -44,6 +44,7 @@ def normalize(field, field_name, statistics, norm_dict_label):
                     (key: statistics name, value: value)
         norm_dict_label (string): 'features' or 'labels'
     Returns:
+
         normalized field
 
     """
@@ -60,6 +61,7 @@ def normalize(field, field_name, statistics, norm_dict_label):
         else:
             field = field * 0
     elif statistics['normalization_type'][norm_dict_label] == 'none':
+        print('non normalizzo')
         pass
     else:
         raise Exception('Normalization type not implemented')
@@ -283,13 +285,13 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         #             nodes_features, 
         #             'dt')
         # print(cf)
-        add_feature(graph.ndata['T'].repeat(1, 1, ntimes), 
+        add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
                     nodes_features, 
-                    'T')
+                    'interface_length')
         add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'k')
-        print(graph.ndata['flux'])
+        #print('flux',graph.ndata['flux'])
         # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
         #             nodes_features, 
         #             'interface_length')
@@ -426,7 +428,7 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
         Dictionary of parameters
 
     """
-    fields_to_normalize = {'node': ['flux', 'dt'], 'edge': [], 'outlet_node': []}
+    fields_to_normalize = {'node': ['flux'], 'edge': [], 'outlet_node': []}
     docompute_statistics = True
     if statistics != None:
         docompute_statistics = False
@@ -459,7 +461,11 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
 
     if docompute_statistics:
         compute_statistics(graphs, fields_to_normalize, statistics)
+
+    print(graphs['k_68.58.grph'].ndata['flux'])
+    print(statistics)
     normalize_graphs(graphs, fields_to_normalize, statistics, 'features')
+    print(graphs['k_68.58.grph'].ndata['flux'])
     add_deltas(graphs)
     if docompute_statistics:
         compute_statistics(graphs, {'node' : ['df']}, statistics)

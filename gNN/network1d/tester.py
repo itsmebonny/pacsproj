@@ -95,10 +95,10 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     #     tot_errs = tot_errs + errs
 
     N = len(dataset.graphs)
-    graph_n = 10 #np.random.uniform(0,N, 1).astype(int)[0]
+    graph_n = np.random.uniform(0,N, 1).astype(int)[0]
     if doplot:
-        node = 2
-        print(graph_n)
+        node = 1
+        print(dataset.graphs[graph_n].ndata['k'])
         r_features, errs_normalized, \
         errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
         plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
@@ -116,7 +116,7 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N, \
            total_time / N, total_timesteps / N
 
-def get_gnn_and_graphs(path, graphs_folder = 'graphs', 
+def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm', 
                        data_location = '/data/graphs'):
 
     """
@@ -154,7 +154,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 

@@ -224,6 +224,7 @@ class EncodeProcessDecodeNetwork(Module):
 
         """
         h = self.output(nodes.data['proc_node'])
+        
         return {'pred_labels': h}
 
 class MeshGraphNet(EncodeProcessDecodeNetwork):
@@ -266,7 +267,7 @@ class MeshGraphNet(EncodeProcessDecodeNetwork):
 
     def continuity_loss(self, g, flowrate, take_mean = True):
         """
-        Compute contiuity loss
+        Compute continuity loss
 
         Continuity loss as the mass loss occurring  at junctions.
 

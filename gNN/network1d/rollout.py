@@ -167,7 +167,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
         r_features = th.cat((r_features, gf.unsqueeze(axis = 2)), axis = 2)
 
         # set next conditions to exact for debug
-        graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
+        #graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
 
     end = time.time()
     tfc = true_graph.ndata['nfeatures'][:,0:1,:].clone()
