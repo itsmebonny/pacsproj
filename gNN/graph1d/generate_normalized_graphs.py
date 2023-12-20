@@ -462,10 +462,8 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
     if docompute_statistics:
         compute_statistics(graphs, fields_to_normalize, statistics)
 
-    print(graphs['k_68.58.grph'].ndata['flux'])
-    print(statistics)
+    
     normalize_graphs(graphs, fields_to_normalize, statistics, 'features')
-    print(graphs['k_68.58.grph'].ndata['flux'])
     add_deltas(graphs)
     if docompute_statistics:
         compute_statistics(graphs, {'node' : ['df']}, statistics)
