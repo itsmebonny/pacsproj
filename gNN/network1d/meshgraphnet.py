@@ -289,15 +289,15 @@ class MeshGraphNet(EncodeProcessDecodeNetwork):
 
         # # we send flowrate through branches, compute the mean
         # # of neighboring nodes, and compute the diff with our estimate
-        # g.update_all(fn.copy_u('next_flowrate', 'm'), 
-        #              fn.sum('m', 'sum_flowrate'))
-        # # branch nodes have only two neighbors
-        # diff = th.abs(2 * g.ndata['next_flowrate'] - g.ndata['sum_flowrate'])
-        # diff = diff * g.ndata['continuity_mask']
-        # if take_mean:
-        #     branch_continuity = th.mean(diff)
-        # else:
-        #     branch_continuity = th.sum(diff)
+        g.update_all(fn.copy_u('next_flowrate', 'm'), 
+                     fn.sum('m', 'sum_flowrate'))
+        # branch nodes have only two neighbors
+        diff = th.abs(2 * g.ndata['next_flowrate'] - g.ndata['sum_flowrate'])
+        diff = diff * g.ndata['continuity_mask']
+        if take_mean:
+            branch_continuity = th.mean(diff)
+        else:
+            branch_continuity = th.sum(diff)
 
         # we keep flowrate at inlet and outlets of junctions
         g.ndata['flow_junction'] = g.ndata['next_flowrate'] * \

@@ -291,6 +291,7 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'k')
+    
         #print('flux',graph.ndata['flux'])
         # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
         #             nodes_features, 

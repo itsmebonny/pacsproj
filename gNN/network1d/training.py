@@ -172,6 +172,8 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
             """
             batched_graph_c = copy.deepcopy(batched_graph)
             ns = batched_graph_c.ndata['next_steps']
+            # print('batched_graph', batched_graph.ndata['nfeatures'])
+            # print('ns', ns)
 
             loss_v = 0
             metric_v = 0
@@ -179,17 +181,22 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
             inmask = batched_graph.ndata['inlet_mask'].bool()
             outmask = batched_graph.ndata['outlet_mask'].bool()
 
-            bccoeff = 1
+            bccoeff = 0
             mask[inmask,0] = mask[inmask,0] * bccoeff
+
             # flow rate is known
-            mask[outmask,0] = mask[outmask,0] * bccoeff
+            # mask[outmask,0] = mask[outmask,0] * bccoeff
             #mask[outmask,1] = mask[outmask,1] * bccoeff
             for istride in range(params['stride']):
+                # print('TRAINING')
                 nf = perform_timestep(gnn_model, params, batched_graph_c, ns, 
                                       istride)
 
 
                 batched_graph_c.ndata['nfeatures'][:,0:1] = nf
+                
+                # print(istride)
+                # print(nf)
 
                 # we follow https://arxiv.org/pdf/2206.07680.pdf for the
                 # coefficient
@@ -198,7 +205,10 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
                     coeff = 1  
 
                 #c_loss = th.tensor(0.0)
-        
+                    
+                # print('real', ns[:,:,istride])
+                # print('pred', nf)
+                #print('mask', mask)
                 loss_v = loss_v + coeff * mse(nf, ns[:,:,istride], mask=None)
                 metric_v = metric_v + coeff * mae(nf, ns[:,:,istride], mask=None)
 
@@ -310,12 +320,16 @@ def train_gnn_model(gnn_model, dataset, params, parallel, doprint = True):
         train_sampler = SubsetRandomSampler(th.arange(num_train))
         num_test = int(len(dataset['test']))
         test_sampler = SubsetRandomSampler(th.arange(num_test))
+
+    #print('index_map',dataset['train'].graphs[0].ndata['nfeatures'])
     
     train_dataloader = GraphDataLoader(dataset['train'], 
                                        sampler = train_sampler,
                                        batch_size = batch_size,
                                        drop_last = False)
-
+    
+    #print(train_dataloader.sampler)
+    
     test_dataloader = GraphDataLoader(dataset['test'], 
                                       sampler = test_sampler,
                                       batch_size = batch_size,
@@ -499,26 +513,26 @@ def parse_command_line_arguments():
 
     parser.add_argument('--bs', help='batch size', type=int, default=32)
     parser.add_argument('--epochs', help='total number of epochs', type=int,
-                        default=20)
+                        default=100)
     parser.add_argument('--lr_decay', help='learning rate decay', type=float,
                         default=0.001)
     parser.add_argument('--lr', help='learning rate', type=float, default=0.01)
     parser.add_argument('--rate_noise', help='rate noise', type=float,
-                        default=100)
+                        default=5)
     parser.add_argument('--rate_noise_features', help='rate noise features', 
                         type=float, default=1e-5)
     parser.add_argument('--weight_decay', help='l2 regularization', 
                         type=float, default=1e-5)
     parser.add_argument('--ls_gnn', help='latent size gnn', type=int,
-                        default=8)
+                        default=16)
     parser.add_argument('--ls_mlp', help='latent size mlps', type=int,
-                        default=8)
+                        default=16)
     parser.add_argument('--process_iterations', help='gnn layers', type=int,
                         default=3)
     parser.add_argument('--hl_mlp', help='hidden layers mlps', type=int,
                         default=2)
     parser.add_argument('--label_norm', help='0: min_max, 1: normal, 2: none',
-                        type=int, default=0)
+                        type=int, default=1)
     parser.add_argument('--stride', help='stride for multistep training',
                         type=int, default=5
                         )
@@ -545,7 +559,7 @@ def parse_command_line_arguments():
 
 def get_graphs_params(label_normalization, types_to_keep, 
                       n_graphs_to_keep = -1,
-                      graphs_folder = 'graphs/',
+                      graphs_folder = 'graphs_rm2/',
                       data_location = io.data_location(),
                       features = None):
     """
@@ -568,7 +582,7 @@ def get_graphs_params(label_normalization, types_to_keep,
     """
 
     input_dir = data_location + graphs_folder
-    norm_type = {'features': 'min_max', 'labels': label_normalization}
+    norm_type = {'features': 'normal', 'labels': label_normalization}
     info = json.load(open(input_dir + '/dataset_info.json'))
 
     t2k = types_to_keep
@@ -582,7 +596,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_rm2/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -614,6 +628,7 @@ def training(parallel, rank = 0, graphs_folder = 'graphs_rm/',
                                              graphs_folder, data_location,
                                              features)
     graph = graphs[list(graphs)[0]]
+
 
     infeat_nodes = graph.ndata['nfeatures'].shape[1] + 1
     infeat_edges = graph.edata['efeatures'].shape[1]
@@ -665,10 +680,7 @@ if __name__ == "__main__":
     # 'synthetic' refers to the bcs, not the geometry
     types_to_keep = []
     nodes_features = [
-            'x', 
             'flux', 
-            'dt',
-            'T',
             'k',
             'interface_length']
 
@@ -677,7 +689,7 @@ if __name__ == "__main__":
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs_rm/', 
+             graphs_folder = 'graphs_rm2/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()

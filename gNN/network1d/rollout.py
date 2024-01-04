@@ -93,7 +93,10 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
     if 'dirichlet' in params['bc_type']:
         set_boundary_conditions_dirichlet(gf, graph, params, bcs, time_index)
 
+    # print('graph', graph.ndata['nfeatures'])
+    # print('bcs', bcs)
     delta = gnn_model(graph)
+    # print('delta:', delta)
     gf[:,0:1] = gf[:,0:1] + delta
 
     if set_bcs:
@@ -103,6 +106,7 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
         elif params['bc_type'] == 'physiological':
             #print(bcs.shape)
             gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
+            #gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
             #print(gf[graph.ndata['inlet_mask'].bool(), 1],bcs[graph.ndata['inlet_mask'].bool(), 0, time_index] )
     return gf[:,0:1]
 
@@ -150,6 +154,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
     tfc = true_graph.ndata['nfeatures'].clone()
     graph.ndata['nfeatures'] = tfc[:,:,0].clone()
     graph.edata['efeatures'] = true_graph.edata['efeatures'].squeeze().clone()
+   
 
     r_features = graph.ndata['nfeatures'][:,0:1].unsqueeze(axis = 2).clone()
     #print('tfc', tfc)
@@ -157,9 +162,11 @@ def rollout(gnn_model, params, graph, average_branches = False):
     for it in range(times-1):
         # set loading variable
         #graph.ndata['nfeatures'][:,-1] = tfc[:,-1,it] # non capisco cosa fa
+        # print('ROLLOUT')
         gf = perform_timestep(gnn_model, params, graph, tfc, it + 1)
         # print('gf', gf)
-        # print('tfc', tfc[:,0,it+1])
+        # print('real delta', tfc[:,0,it+1]- tfc[:,0,it])
+        
         if average_branches:
             compute_average_branches(graph, gf[:,1])
 
@@ -167,7 +174,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
         r_features = th.cat((r_features, gf.unsqueeze(axis = 2)), axis = 2)
 
         # set next conditions to exact for debug
-        #graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
+        # graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
 
     end = time.time()
     tfc = true_graph.ndata['nfeatures'][:,0:1,:].clone()
@@ -176,10 +183,11 @@ def rollout(gnn_model, params, graph, average_branches = False):
 
     # we only compute errors on branch nodes
     # noi vogliamo calcolare gli errori su tutti i nodi ma così lo stai facendo solo su inlet??
-    # branch_mask = th.reshape(graph.ndata['inlet_mask']*1,(-1,1,1))
+    # branch_mask = th.ones(graph.ndata['inlet_mask'].shape)
+    # branch_mask = th.reshape(branch_mask - graph.ndata['inlet_mask']*1,(-1,1,1))
     # branch_mask = branch_mask.repeat(1,2,tfc.shape[2])
-
-    # compute error
+    # # print('branch_mask', branch_mask)
+    # # compute error
     # tfc = tfc * branch_mask
     # rfc = rfc * branch_mask
     diff = tfc - rfc

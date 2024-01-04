@@ -97,15 +97,17 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     N = len(dataset.graphs)
     graph_n = np.random.uniform(0,N, 1).astype(int)[0]
     if doplot:
-        node = 1
-        print(dataset.graphs[graph_n].ndata['k'])
-        r_features, errs_normalized, \
-        errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
-        plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
-        print
-        plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
-        plt.show()
-        print(th.max(th.abs(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:])))
+        for i in range(5):
+            node = i
+            print(dataset.graphs[graph_n].ndata['k'])
+            r_features, errs_normalized, \
+            errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
+            plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
+            
+            plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
+            plt.show()
+        print(errs_normalized)
+        # print(th.max(th.abs(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:])))
     print('-------------------------------------')
     print('Global statistics')
     print('Errors')
@@ -116,8 +118,8 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N, \
            total_time / N, total_timesteps / N
 
-def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm', 
-                       data_location = '/data/graphs'):
+def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm2', 
+                       data_location = '/data/graphs_rm2'):
 
     """
     Get GNN and list of graphs given the path to a saved model folder.
@@ -154,7 +156,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm2/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 
@@ -194,4 +196,4 @@ if __name__ == '__main__':
         shutil.rmtree('results')
 
     evaluate_all_models(dataset, 'train', gnn_model, params, True)
-    #evaluate_all_models(dataset, 'test', gnn_model, params, True)
+    evaluate_all_models(dataset, 'test', gnn_model, params, True)
