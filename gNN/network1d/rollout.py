@@ -106,6 +106,7 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
         elif params['bc_type'] == 'physiological':
             #print(bcs.shape)
             gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
+            gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
             #gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
             #print(gf[graph.ndata['inlet_mask'].bool(), 1],bcs[graph.ndata['inlet_mask'].bool(), 0, time_index] )
     return gf[:,0:1]

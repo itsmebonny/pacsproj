@@ -524,7 +524,7 @@ def parse_command_line_arguments():
     parser.add_argument('--weight_decay', help='l2 regularization', 
                         type=float, default=1e-5)
     parser.add_argument('--ls_gnn', help='latent size gnn', type=int,
-                        default=16)
+                        default=8)
     parser.add_argument('--ls_mlp', help='latent size mlps', type=int,
                         default=16)
     parser.add_argument('--process_iterations', help='gnn layers', type=int,
@@ -532,7 +532,7 @@ def parse_command_line_arguments():
     parser.add_argument('--hl_mlp', help='hidden layers mlps', type=int,
                         default=2)
     parser.add_argument('--label_norm', help='0: min_max, 1: normal, 2: none',
-                        type=int, default=1)
+                        type=int, default=0)
     parser.add_argument('--stride', help='stride for multistep training',
                         type=int, default=5
                         )
@@ -559,7 +559,7 @@ def parse_command_line_arguments():
 
 def get_graphs_params(label_normalization, types_to_keep, 
                       n_graphs_to_keep = -1,
-                      graphs_folder = 'graphs_rm2/',
+                      graphs_folder = 'graphs_rm/',
                       data_location = io.data_location(),
                       features = None):
     """
@@ -596,7 +596,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_rm2/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -689,7 +689,7 @@ if __name__ == "__main__":
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs_rm2/', 
+             graphs_folder = 'graphs_rm/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()

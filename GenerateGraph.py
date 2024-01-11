@@ -5,36 +5,27 @@ import numpy as np
 
 def generate_graph(point_data, points, edges_data, edges1, edges2):
     """
-    Generate graph.
-
-    Generate DGL graph out of data obtained from a vtp file.
+    Generate DGL graph.
 
     Arguments:
         point_data: dictionary containing point data (key: name, value: data)
-        points: n x 3 numpy array of point coordinates
+        points: n x 2 numpy array of point coordinates
+        edges_data: dictionary containing edge data (key: name, value: data)
         edges1: numpy array containing indices of source nodes for every edge
         edges2: numpy array containing indices of dest nodes for every edge
-        add_boundary_edges (bool): decide whether to add boundary edges
-        rcr_values: dictionary associating each branch id outlet to values
-                    of RCR boundary conditions
 
     Returns:
         DGL graph
-        dictionary containing indices of inlet and outlet nodes
-        n x 3 numpy array of point coordinates
-        n-dimensional array containin junction ids
-        numpy array containing indices of source nodes for every edge
-        numpy array containing indices of dist nodes for every edge
     """
 
-    inlet = [0]
-    outlets = [4] #find_outlets(edges1, edges2)
+    # inlet = [0]
+    # outlets = [4] #find_outlets(edges1, edges2)
 
-    indices = {"inlet": inlet, "outlets": outlets}
+    # indices = {"inlet": inlet, "outlets": outlets}
 
     graph = dgl.graph((edges1, edges2), idtype=th.int32)
     k = max(point_data['k'])
-    int_length = max(point_data['interface_length'])
+    # int_length = max(point_data['interface_length'])
     area = max(edges_data['area'])
     length = max(edges_data['length'])
     graph.ndata["x"] = th.tensor(points, dtype=th.float32)
@@ -53,7 +44,6 @@ def generate_graph(point_data, points, edges_data, edges1, edges2):
 def add_field(graph, field, field_name, offset=0):
     """
     Add time-dependent fields to a DGL graph.
-
     Add time-dependent scalar fields as graph node features. The time-dependent
     fields are stored as n x 1 x m Pytorch tensors, where n is the number of
     graph nodes and m the number of timesteps.
@@ -80,31 +70,20 @@ def add_field(graph, field, field_name, offset=0):
     for i, t in enumerate(times):
         f = th.tensor(field[t], dtype=th.float32)
         field_t[:, 0, i] = f
-    if field_name == "flux":
-        graph.ndata[field_name] = field_t
-        graph.ndata["dt"] = th.reshape(
-            th.ones(graph.num_nodes(), dtype=th.float32) * dt, (-1, 1, 1)
-        )
-        graph.ndata["T"] = th.reshape(
-            th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1)
-        )
+    # if field_name == "flux":
+    graph.ndata[field_name] = field_t
+    graph.ndata["dt"] = th.reshape(
+        th.ones(graph.num_nodes(), dtype=th.float32) * dt, (-1, 1, 1))
+    graph.ndata["T"] = th.reshape(
+        th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1))
         
-    elif field_name == "mean_temp":
-        graph.edata[field_name] = field_t
-        graph.edata["dt"] = th.reshape(
-            th.ones(graph.num_edges(), dtype=th.float32) * dt, (-1, 1, 1)
-        )
-        graph.edata["T"] = th.reshape(
-            th.ones(graph.num_edges(), dtype=th.float32) * T, (-1, 1, 1)
-        )
 def save_graph(graph, filename, output_dir = "data/graphs/"):
     """
-    Save graph to disk.
-
     Save graph to disk as a DGL graph.
 
     Arguments:
         graph: DGL graph
+        filename (string): name of the file
         output_dir (string): path to output directory
     """
     
