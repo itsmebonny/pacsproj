@@ -67,7 +67,7 @@ for it in range(args.nmesh):
 
     # Write mesh data:
     gmsh.option.setNumber("Mesh.MshFileVersion",2.2)
-    gmsh.write(f"data/mesh_test/RandomMesh_{it}.msh")
+    gmsh.write(f"data/mesh_long/RandomMesh_{it}.msh")
 
     # Creates graphical user interface
     #if 'close' not in sys.argv:

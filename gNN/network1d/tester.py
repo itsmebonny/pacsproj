@@ -95,9 +95,9 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     #     tot_errs = tot_errs + errs
 
     N = len(dataset.graphs)
-    graph_n = 45#np.random.uniform(0,N, 1).astype(int)[0]
+    graph_n = np.random.uniform(0,N, 1).astype(int)[0]
     if doplot:
-        for i in range(5):
+        for i in range(10):
             node = i
             print(dataset.graphs[graph_n].ndata['k'])
             r_features, errs_normalized, \
@@ -156,7 +156,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_long/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 

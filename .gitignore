@@ -2,3 +2,11 @@ data
 __pycache__
 .vscode
 GNN.code-workspace
+report/main.aux
+report/main.log
+report/main.out
+report/main.synctex.gz
+report/main.bbl
+report/main.fdb_latexmk
+report/main.fls
+report/main.blg
