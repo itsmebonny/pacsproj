@@ -347,6 +347,7 @@ class Heat(Solver):
         L=u0*v*dx+self.dt*self.f*v*dx + self.g*v*self.dt*self.mesh.ds(self.mesh.tags['inlet'][0])
 
         # lists to store the solution at each time step and the corresponding time
+        # possiamo usare degli array? 
         self.ut = []
         self.ts = []
 
@@ -366,6 +367,8 @@ class Heat(Solver):
             # Plot solution at each time step
             if self.doplot:
                 self.plot_solution(U)
+
+        return self.ut 
 
 
     # Method to plot the solution

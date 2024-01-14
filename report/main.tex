@@ -189,15 +189,24 @@ The mathematical formulation of the problem is the following:
 \end{equation}
 where \(u\) is the temperature, \(k\) is the diffusivity constant, \(h\) is the
 Neumann condition at the inlet boundary. As domain \(\Omega\) we consider different 
-geometries such as the one shown in Figure \ref{geometry}: 
-% spiegare meglio come sono fatte le mesh
+geometries such as the one shown in Figure : the 2D mesh is composed of 
+4 trapezoids where the interface between them have different lengths.
+% aggiungere figura di una mesh 
 
 We generated 20 different mesh using gmsh. 
 Then we solved the problem in Fenics using Discontinuous Galerkin method and implicit
 Euler for time discretization, imposing as Neumann condition at inlet 
-\(h = 2e^{-(t-2.5)^2}\). 
+\(h = 2e^{-(t-2.5)^2}\).
+From these solutions we generated a dataset of 277 graphs. Each graph has 5 nodes: 
+an inlet node, an outlet node and 3 nodes in correspondence of the interfaces. As 
+descriptor of the the state of the system we consider the heat flux at each time step,
+which is computed as the integral of the normal derivative of the solution on the interface.
+The other node features are the thermal diffusivity \(k\), the interface length and the 
+nodal type (inlet, outlet or branch node). As edge features we consider the area of the
+corresponding trapezoid and the distance between the nodes connected by the edge. 
 
-% creazione dei grafi con le varie features 
+% tabella con le varie features?
+
 % training della GNN con i parametri
 
 %-----------------------------------------------------------------------------
@@ -206,6 +215,55 @@ Euler for time discretization, imposing as Neumann condition at inlet
 
 \section{Code}
 
+% introduzione sulla struttura del nostro codice:
+% mesh creation con gmsh -> potremmo creare una classe quindi magari 
+% GenerateData.py: classi mesh loader, solver, data generator 
+% GenerateGraph.py -> funzioni per generare i grafi 
+% gNN
+
+\subsection{Mesh creation}
+
+\subsection{Data generation}
+
+\texttt{GenerateData.py} contains two abstract classes: \texttt{Solver} and 
+\texttt{DataGenerator}. The first one is used to solve the variational problem, while 
+the second one is designed to store all the quantities of interest which
+will be used to build the graphs. Each of these parent classes has two child classes:
+we start describing the solver one. 
+
+The abstract base class \texttt{Solver} contains the following methods:
+\begin{itemize}
+    \item A costructor that takes as input a \texttt{MeshLoader} object 
+    \item Abstract method \texttt{set\_parameters}
+    \item Abstract method \texttt{solve}
+    \item Abstract method \texttt{plot\_solution}
+\end{itemize}
+
+All the abstract method are overriden in the child classes \texttt{Heat} and 
+\texttt{Stokes}. The choice of a parent abstract class for the solver is useful 
+because it allows to use the same code for different problems, implementing
+child classes that solve different equations, but with the same structure. 
+We focus on the description of the \texttt{Heat} class, since it is the one used in 
+the test case, but the \texttt{Stokes} class is implemented analogously.
+
+The \texttt{Heat} class contains the following methods overriden from the parent class:
+\begin{itemize}
+    \item A constructor which uses the \texttt{super()} function to inherit the base 
+    class constructor. Other problem parameters are passed to the constructor such as
+    function space, the source term, the diffusivity constant, the time step and so on. 
+    % non so se li devo elencare tutti mi sembra inutile
+    \item \texttt{set\_parameters}: function to set different problem parameters
+    \item \texttt{solve}: this method solves the Heat equation using Discontinuous
+    Galerkin method and imposing a Neumann conditiona at the inlet boundary. The solution
+    at each time step is stored in a list, as well as the time instants. 
+    % decidere se si può mettere in degli numpy array 
+    \item \texttt{plot\_solution}: it takes as input the solution at a specific time 
+    step and it plots it.
+\end{itemize}
+
+\subsection{Graph generation}
+
+\subsection{Graph Neural Network}
 
 %-----------------------------------------------------------------------------
 % Results
