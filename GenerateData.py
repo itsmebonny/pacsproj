@@ -27,8 +27,7 @@ class MeshLoader:
         Method to save the tags of the boundaries and faces of the mesh
 
         The method takes as input a dictionary with the following keys: 
-        'walls', 'inlet', 'outlet', 'interface', 'faces'
-        and as values a list of the corresponding tags
+        'walls', 'inlet', 'outlet', 'interface', 'faces' and as values a list of the corresponding tags
         """
         self.tags = tags
         self.rename_boundaries = MeshFunction("size_t", self.mesh,1)
@@ -74,140 +73,6 @@ class Solver(ABC):
     @abstractmethod 
     def plot_solution(self):
         pass 
-
-# class Stokes(Solver):
-
-#     def __init__(self, mesh):
-#         super().__init__(mesh)
-#         self.V = VectorFunctionSpace(self.mesh.mesh,"P", 2)
-#         self.Q = FunctionSpace(self.mesh.mesh,"P", 1)
-#         self.rho = 1*1e3
-#         self.mu = 4*1e-3
-#         self.U0 = 0.1
-#         self.L0 = 0.1
-#         self.inflow = Expression(("-1.0/4 * x[1] * x[1] + 1", "0.0"), degree=0)
-#         self.dt = 0.5
-#         self.T = 10
-#         self.f = Constant((0.0, 0.0))
-
-#     def set_parameters(self,V,Q,rho,mu,U0,L0,inflow,f):
-#         self.V = V
-#         self.Q = Q
-#         self.rho = rho
-#         self.mu = mu
-#         self.U0 = U0
-#         self.L0 = L0
-#         self.inflow = inflow
-#         self.f = f
-
-#     def solve(self):
-
-#         u = TrialFunction(self.V)
-#         p = TrialFunction(self.Q)
-#         v = TestFunction(self.V)
-#         q = TestFunction(self.Q)
-
-#         # No-slip boundary condition for velocity
-#         bcsu = []
-#         bcsp = []
-#         noslip = Constant((0.0, 0.0))
-#         for i in self.mesh.tags['walls']:
-#             bcsu.append(DirichletBC(self.V, noslip, self.mesh.bounds, i))
-        
-#         # Inflow boundary condition for velocity
-#         for i in self.mesh.tags['inlet']:
-#             bcsu.append(DirichletBC(self.V, self.inflow, self.mesh.bounds, i))
-#         for i in self.mesh.tags['outlet']:
-#             bcsp.append(DirichletBC(self.Q, Constant(0.0), self.mesh.bounds, i))
-#         bcs = bcsu + bcsp
-#         # Create functions
-#         # u0 = Function(self.V)
-#         u1 = Function(self.V)
-#         p1 = Function(self.Q)
-        
-
-#         Re = Constant(self.rho * self.U0 * self.L0 / self.mu)
-
-#         TH = self.V *self.Q
-#         W = FunctionSpace(self.mesh.mesh, TH)
-#         w0 = Function(W)
-#         a0 = (1/Re)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx 
-#         L0 = inner(self.f,v)*dx 
-#         solve(a0 == L0, w0, bcs)
-#         u0, p0 = w0.split()
-
-#         # Step 1
-#         a1 = (1/self.dt)*inner(u,v)*dx + (1/Re)*inner(grad(u), grad(v))*dx + inner(dot(grad(u),u0),v)*dx # potrebbe essere dot(grad(u),u0)
-#         L1 = (1/self.dt)*inner(u0,v)*dx + inner(self.f,v)*dx 
-        
-#         # step 2
-#         a2 = inner(grad(p), grad(q))*dx
-#         L2 = -(1/self.dt)*div(u1)*q*dx
-
-#         # Velocity update
-#         a3 = inner(u, v)*dx
-#         L3 = inner(u1, v)*dx - self.dt*inner(grad(p1), v)*dx
-
-#         # Assemble matrices
-#         A1 = assemble(a1)
-#         A2 = assemble(a2)
-#         A3 = assemble(a3)
-
-#         # Use amg preconditioner if available
-#         prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
-
-#         # Time-stepping
-#         t = self.dt
-#         self.ut = []
-#         self.pt = []
-#         while t < self.T + DOLFIN_EPS:
-
-#             # Update pressure boundary condition
-#             self.inflow.t = t
-
-#             # Compute tentative velocity step
-         
-#             b1 = assemble(L1)
-#             [bc.apply(A1, b1) for bc in bcsu]
-#             solve(A1, u1.vector(), b1, "gmres", "default")
-            
-
-#             # Pressure correction
-            
-#             b2 = assemble(L2)
-#             [bc.apply(A2, b2) for bc in bcsp]
-#             solve(A2, p1.vector(), b2, "cg", prec)
-            
-
-#             # Velocity correction
-   
-#             b3 = assemble(L3)
-#             [bc.apply(A3, b3) for bc in bcsu]
-#             solve(A3, u1.vector(), b3, "gmres", "default")
-
-#             #norm = mpl.colors.Normalize(vmin=0.,vmax=15.,clip=False)
-#             vel = plot(u1, title = 'Velocity')#, norm=norm)
-#             plt.colorbar(vel,label='m/s')
-#             plt.show()
-#             pres = plot(p1, title = 'Pressure')
-#             plt.colorbar(pres,label='Pa')
-#             plt.show()
-
-#             self.ut.append(u1*self.U0)
-#             self.pt.append(p1*self.rho*self.U0*self.U0) #non va dovrebbe essere pt.vector()[:] = p1.vector()[:]*self.rho*self.U0*self.U0 e dovremmo salvarlo in un array
-
-#             # Move to next time step
-#             u0.assign(u1)
-#             t += self.dt
-
-#     def plot_solution(self):
-#         vel = plot(self.ut[-1], title = 'Velocity')
-#         plt.colorbar(vel,label='m/s')
-#         plt.show()
-#         pres = plot(self.pt[-1], title = 'Pressure')
-#         plt.colorbar(pres,label='Pa')
-#         plt.show()
-        
 
 
 class Stokes(Solver):
@@ -269,26 +134,24 @@ class Stokes(Solver):
         L = inner(f,v)*dx + (1/self.dt)*inner(u0,v)*dx
 
         U = Function(W)
-        t = self.dt
-        self.ts = []
-        self.ut = []
-        self.pt = []
-        while(t<self.T):
+        # t = self.dt
+        self.ts = np.arange(0,self.T,self.dt)
+        self.ut = np.empty(len(self.ts), dtype=object)
+        self.pt = np.empty(len(self.ts), dtype=object)
+        nsteps = int(self.T/self.dt)
+        t = 0
+        while(t<nsteps):
             solve(a == L, U, bcs)
             u, p = U.split()
             fa.assign([u0,p0],U)
-            # plot(u)
-            # plt.colorbar(plot(u))
-            # plt.show()
             temp1 = Function(P)
             temp1.vector()[:] = u0.vector()[:]
-            self.ut.append(temp1)
+            self.ut[t] = temp1
             temp2 = Function(Z)
             temp2.vector()[:] = p0.vector()[:]
-            self.pt.append(temp2)
-            self.ts.append(t)
+            self.pt[t] = temp2
 
-            t+=self.dt
+            t+=1
 
         self.u = u*self.U0
         self.p = p*self.rho*self.U0*self.U0
@@ -346,28 +209,26 @@ class Heat(Solver):
         a = a_int + a_facet
         L=u0*v*dx+self.dt*self.f*v*dx + self.g*v*self.dt*self.mesh.ds(self.mesh.tags['inlet'][0])
 
-        # lists to store the solution at each time step and the corresponding time
-        # possiamo usare degli array? 
-        self.ut = []
-        self.ts = []
+        self.ts = np.arange(0,self.T,self.dt)
+        self.ut = np.empty(len(self.ts), dtype=object)
 
         # Solve the heat equation at each time step
-        while(t<=self.T):
+        nsteps = int(self.T/self.dt)
+        t=0
+        while(t<nsteps):
             temp = Function(self.V)
             temp.vector()[:] = u0.vector()[:]
-            self.ut.append(temp)
-            self.g.t=t
+            self.ut[t] = temp
+            self.g.t=t*self.dt
             solve(a==L,U)
 
             # Update
             u0.assign(U)
-            self.ts.append(t)
-            t+=float(self.dt)
+            t+=1
 
             # Plot solution at each time step
             if self.doplot:
                 self.plot_solution(U)
-
         return self.ut 
 
 
@@ -386,6 +247,7 @@ class DataGenerator(ABC):
         self.mesh = mesh
         self.n = FacetNormal(self.mesh.mesh)
         self.h = self.mesh.mesh.hmin()
+        self.NNodes = len(self.mesh.tags['interface']) + len(self.mesh.tags['inlet']) + len(self.mesh.tags['outlet'])
 
     @abstractmethod
     def flux(self):
@@ -395,8 +257,8 @@ class DataGenerator(ABC):
     def inlet_flux(self,tag, u):
         pass
 
-    def area(self,domain, u):
-        area = assemble(Constant(1.0)*self.mesh.dx(domain))
+    def area(self,tag):
+        area = assemble(Constant(1.0)*self.mesh.dx(tag))
         return area
 
     def create_edges(self):
@@ -409,40 +271,31 @@ class DataGenerator(ABC):
     def edges_data(self):
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
-        dict_e = {'edgeId':[], 'area':[], 'length':[]}
-        for i in range(len(self.NodesData['NodeId'])-1):
-            dict_e['edgeId'].append(i)
-        
-        for i in self.mesh.tags['faces']:
-            dict_e['area'].append(self.area(i,self.solver.ut[0]))
-
-        for j in range(len(self.center_line)-1):
-            dict_e['length'].append(self.center_line[j+1][0]-self.center_line[j][0])
+        dict_e = {'area': np.zeros(self.NNodes-1), 'length': np.zeros(self.NNodes-1)}
+        dict_e['edgeId'] = np.arange(0,self.NNodes-1)
+        for j in range(self.NNodes-1):
+            dict_e['area'][j] = self.area(self.mesh.tags['faces'][j])
+            dict_e['length'][j] = self.center_line[j+1][0]-self.center_line[j][0]
         self.EdgesData = dict_e
         return dict_e
 
     def nodes_data(self):
         if not hasattr(self, 'center_line'):
             self.centerline()
-        dict = {'k':[], 'NodeId':[], 'inlet_mask':[], 'outlet_mask':[], 'interface_length': []}
-        for j in range(len(self.center_line)):
-                dict['NodeId'].append(j)
-                if j == 0:
-                    dict['inlet_mask'].append(1)
-                    dict['outlet_mask'].append(0)
-                elif j == len(self.center_line)-1:
-                    dict['inlet_mask'].append(0)
-                    dict['outlet_mask'].append(1)
-                else:
-                    dict['inlet_mask'].append(0)
-                    dict['outlet_mask'].append(0)
-                dict['k'].append(self.solver.k)
+        dict = {'k': self.solver.k, 'inlet_mask': np.zeros(self.NNodes,dtype=bool), 'outlet_mask':np.zeros(self.NNodes,dtype=bool), 'interface_length': np.zeros(self.NNodes)}
+        dict['NodeId'] = np.arange(0,self.NNodes)
+        dict['inlet_mask'][0] = 1
+        dict['outlet_mask'][-1] = 1
+        it = 0
         for i in self.mesh.tags['inlet']:
-            dict['interface_length'].append(round(assemble(Constant(1.0)*self.mesh.ds(i)),2)) 
+            dict['interface_length'][it] = round(assemble(Constant(1.0)*self.mesh.ds(i)),2)
+            it+=1
         for i in self.mesh.tags['interface']:
-            dict['interface_length'].append(round(assemble(Constant(1.0)*self.mesh.dS(i)),2))  
+            dict['interface_length'][it] = round(assemble(Constant(1.0)*self.mesh.dS(i)),2)
+            it+=1  
         for i in self.mesh.tags['outlet']:
-            dict['interface_length'].append(round(assemble(Constant(1.0)*self.mesh.ds(i)),2))  
+            dict['interface_length'][it] = round(assemble(Constant(1.0)*self.mesh.ds(i)),2)  
+            it+=1
 
         self.NodesData = dict
         return dict
@@ -453,8 +306,9 @@ class DataGenerator(ABC):
 
     # Method to calculate the centerline coordinates of the mesh, which are the coordinates of the graph nodes
     def centerline(self):
-        center_line = [] # dovrebbe essere un array di array (comunemente detto lista di liste)
+        center_line = np.zeros((self.NNodes,2)) # dovrebbe essere un array di array (comunemente detto lista di liste)
         tags_list = ['inlet','interface','outlet']
+        it=0
         for j in tags_list:
             for i in self.mesh.tags[j]:
                 edge_coord =[]
@@ -467,9 +321,10 @@ class DataGenerator(ABC):
 
                 edge_coord = np.array(edge_coord)
                 # Calculate the midpoint of the edge and append to the centerline list
-                center_line.append([(np.max(edge_coord[:,0])+np.min(edge_coord[:,0]))/2,(np.max(edge_coord[:,1])+np.min(edge_coord[:,1]))/2])
+                center_line[it] = [(np.max(edge_coord[:,0])+np.min(edge_coord[:,0]))/2,(np.max(edge_coord[:,1])+np.min(edge_coord[:,1]))/2]
+                it+=1
         self.center_line = center_line
-        self.NNodes = len(center_line)
+        # self.NNodes = len(center_line)
         return center_line
 
     def save_graph(self, fields_names, output_dir = "data/graphs/"):
@@ -548,7 +403,6 @@ class DataNS(DataGenerator):
     def save_graph(self,fields_names=['flow_rate','pressure'], output_dir = "data/graphs/"):
         return super().save_graph(fields_names,output_dir)
     
-    # for further improvements 
 
 # Define a subclass DataHeat that inherits from the DataGenerator abstract base class
 class DataHeat(DataGenerator):
@@ -566,10 +420,6 @@ class DataHeat(DataGenerator):
         flux = self.solver.k*dot(grad(u), self.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
-    
-    def area(self,domain, u):
-        area = assemble(Constant(1.0)*self.mesh.dx(domain))
-        return area
 
     def td_nodes_data(self):
         td_dict = {}
@@ -583,8 +433,6 @@ class DataHeat(DataGenerator):
             for i in self.mesh.tags['interface']:
                 td_dict[self.solver.ts[t]][it] = self.flux(i,self.solver.ut[t])  
                 it+=1    
-            # for i in self.mesh.tags['outlet']:
-            #     td_dict[self.solver.ts[t]].append(0.0)
 
         self.TDNodesData = [td_dict]
         return td_dict

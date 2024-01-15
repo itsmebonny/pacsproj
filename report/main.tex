@@ -132,25 +132,7 @@
 %-----------------------------------------------------------------------------
 
 \section{Introduction}
-Full 3D blood flow models are important in the study of cardiovascular system 
-since they allow to extract detailed quantities of interest but their actual 
-implementation is limited due to their high computational cost. 
-For this reason, reduced order models are widely used in this fields because of 
-their efficiency. An example is presented in \cite{Luca}, where a one-dimensional
-redueced order model is implemented to simulate the blood flow in the aorta using 
-a graph neural network trained on three-dimensional simulations. In this work,
-we propose a different application, where the graph neural network is used to 
-approximate the solution of different problems. In particular, we consider the
-heat equation as test case, but the goal of the project is to show the potential
-extension of this approach to solve more difficult problems with complex geometries,
-such as the simulations of proteins spreading in the neural system, which are at
-the basis of neurodegenerative diseases \cite{MattiaCorti}.
-The main part of this project is the implementation of a library for data generation 
-used to train the graph neural network and the adaptation of the code [di Luca 
-non so come citarlo] to make it suitable for our specific test case. In the following sections, 
-we first present the problem formulation and a detailed description of the code 
-developed, then we show the results obtained and a discussion of the possible 
-further developments and extensions.
+Full 3D blood flow models are important in the study of cardiovascular system since they allow to extract detailed quantities of interest but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this fields because of their efficiency. An example is presented in \cite{Luca}, where a one-dimensionalredueced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work,we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider theheat equation as test case, but the goal of the project is to show the potentialextension of this approach to solve more difficult problems with complex geometries,such as the simulations of proteins spreading in the neural system, which are atthe basis of neurodegenerative diseases \cite{MattiaCorti}.The main part of this project is the implementation of a library for data generation used to train the graph neural network and the adaptation of the code [di Luca non so come citarlo] to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
 
 %-----------------------------------------------------------------------------
 % Problem
@@ -161,21 +143,22 @@ further developments and extensions.
 % descrizione del problema generico Lu=F risolto con Fenics
 We consider a general time-dependent variational problem of the form:
 \[Lu=f\]
-with \(L\) a linear operator, \(f\) a source term and \(u\) the solution. Given a specific 
-geometry \(\Omega\) and using the finite element method implemented in Fenics, we can solve 
-this problem and obtain the solution \(u^{n}\) at each time step \(n\). From this,
-we can generate a graph that decribes the geometry of the problem and the solution, 
-storing some values of interest as features of the nodes and the edges.
-Solving the problem for different geometries and different values of the parameters
-(e.g. the diffusivity constant) we can generate a dataset that will be used to train
-the graph neural network. 
-As in \cite{Luca}, the GNN is applied iteratively: at each time step it takes 
-as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features 
-at that time step, and it predicts an update for the state variables. The prediction is 
-combined with the previous time step to estimate \(\Theta^{n+1}\).
+with \(L\) a linear operator, \(f\) a source term and \(u\) the solution. Given a specific geometry \(\Omega\) and using the finite element method implemented in Fenics, we can solve this problem and obtain the solution \(u^{n}\) at each time step \(n\). From this,we can generate a graph that decribes the geometry of the problem and the solution, storing some values of interest as features of the nodes and the edges.By solving the problem for different geometries and different values of the parameters(e.g. the diffusivity constant) we can generate a dataset that will be used to train the graph neural network. 
+
+The graph neural network used in this project is the one presented in \cite{Luca}, which is an adaptation of the MeshGraphNet implementation \cite{MeshGraphNet}, which we modified to make it suitable for our test case and extendable to other problems.
+The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features at that time step, and it predicts an update for the state variables. The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
+A forward step of the GNN is composed by three stages:
+\begin{enumerate}
+    \item Encode: a latent representation of the node and edge features is computed using a fully connencted neural network.
+    \item Process: the process stage is composed by L identical blocks, each of them is applied in sequence to the output of the previous blocs, updating the node and edge features. 
+    \item Decode: using a fully connected neural network, the node features are transformend from the latent space to the output space. The output of the GNN is a vector containing the update of the state variables \(\delta\Theta^n\) at each node of the graph. 
+\end{enumerate}
+After this forward step, the state variables can be updated as \(\Theta^{n+1} = \Theta^{n} + \delta\Theta^{n}\).
+
+% aggiungere tipo la loss 
 
 
-% test case heat equation
+
 \subsection{Test case: heat equation}
 In this work, we consider the heat equation as test case. 
 The mathematical formulation of the problem is the following:
@@ -187,23 +170,15 @@ The mathematical formulation of the problem is the following:
         \cup \partial \Omega_{walls}.
     \end{cases}
 \end{equation}
-where \(u\) is the temperature, \(k\) is the diffusivity constant, \(h\) is the
-Neumann condition at the inlet boundary. As domain \(\Omega\) we consider different 
-geometries such as the one shown in Figure : the 2D mesh is composed of 
-4 trapezoids where the interface between them have different lengths.
+where \(u\) is the temperature, \(k\) is the diffusivity constant, \(h\) is the Neumann condition at the inlet boundary. As domain \(\Omega\) we consider different geometries such as the one shown in Figure : the 2D mesh is composed of 4 trapezoids where the interface between them have different lengths.
 % aggiungere figura di una mesh 
 
 We generated 20 different mesh using gmsh. 
-Then we solved the problem in Fenics using Discontinuous Galerkin method and implicit
-Euler for time discretization, imposing as Neumann condition at inlet 
-\(h = 2e^{-(t-2.5)^2}\).
-From these solutions we generated a dataset of 277 graphs. Each graph has 5 nodes: 
-an inlet node, an outlet node and 3 nodes in correspondence of the interfaces. As 
-descriptor of the the state of the system we consider the heat flux at each time step,
-which is computed as the integral of the normal derivative of the solution on the interface.
-The other node features are the thermal diffusivity \(k\), the interface length and the 
-nodal type (inlet, outlet or branch node). As edge features we consider the area of the
-corresponding trapezoid and the distance between the nodes connected by the edge. 
+Then we solved the problem in Fenics using Discontinuous Galerkin method and implicitEuler for time discretization, imposing as Neumann condition at inlet \(h = 2e^{-(t-2.5)^2}\).
+From these solutions we generated a dataset of 277 graphs. 
+Each graph has 5 nodes: an inlet node, an outlet node and 3 nodes in correspondence of the interfaces. 
+As descriptor of the the state of the system we consider the heat flux at each time step,which is computed as the integral of the normal derivative of the solution on the interface.The other node features are the thermal diffusivity \(k\), the interface length and the nodal type (inlet, outlet or branch node). 
+As edge features we consider the area of thecorresponding trapezoid and the distance between the nodes connected by the edge. 
 
 % tabella con le varie features?
 
@@ -225,43 +200,64 @@ corresponding trapezoid and the distance between the nodes connected by the edge
 
 \subsection{Data generation}
 
-\texttt{GenerateData.py} contains two abstract classes: \texttt{Solver} and 
-\texttt{DataGenerator}. The first one is used to solve the variational problem, while 
-the second one is designed to store all the quantities of interest which
-will be used to build the graphs. Each of these parent classes has two child classes:
-we start describing the solver one. 
+\texttt{GenerateData.py} contains two abstract classes: \texttt{Solver} and \texttt{DataGenerator}. The first one is used to solve the variational problem, while the second one is designed to store all the quantities of interest whichwill be used to build the graphs. Each of these parent classes has two child classes: we start describing the solver one. 
 
 The abstract base class \texttt{Solver} contains the following methods:
 \begin{itemize}
-    \item A costructor that takes as input a \texttt{MeshLoader} object 
-    \item Abstract method \texttt{set\_parameters}
-    \item Abstract method \texttt{solve}
-    \item Abstract method \texttt{plot\_solution}
+    \item \texttt{\_\_init\_\_(self,mesh)}: costructor that takes as input a \texttt{MeshLoader} object 
+    \item \texttt{set\_parameters(self)}: abstract method
+    \item \texttt{solve(self)}: abstract method
+    \item \texttt{plot\_solution(self)}: abstract method
 \end{itemize}
 
-All the abstract method are overriden in the child classes \texttt{Heat} and 
-\texttt{Stokes}. The choice of a parent abstract class for the solver is useful 
-because it allows to use the same code for different problems, implementing
-child classes that solve different equations, but with the same structure. 
-We focus on the description of the \texttt{Heat} class, since it is the one used in 
-the test case, but the \texttt{Stokes} class is implemented analogously.
+All the abstract method are overriden in the child classes \texttt{Heat} and \texttt{Stokes}. The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementingchild classes that solve different equations, but with the same structure. 
+We focus on the description of the \texttt{Heat} class, since it is the one used in the test case, but the \texttt{Stokes} class is implemented analogously.
 
 The \texttt{Heat} class contains the following methods overriden from the parent class:
 \begin{itemize}
-    \item A constructor which uses the \texttt{super()} function to inherit the base 
-    class constructor. Other problem parameters are passed to the constructor such as
-    function space, the source term, the diffusivity constant, the time step and so on. 
-    % non so se li devo elencare tutti mi sembra inutile
-    \item \texttt{set\_parameters}: function to set different problem parameters
-    \item \texttt{solve}: this method solves the Heat equation using Discontinuous
-    Galerkin method and imposing a Neumann conditiona at the inlet boundary. The solution
-    at each time step is stored in a list, as well as the time instants. 
+    \item \texttt{\_\_init\_\_(self,mesh, V, k, f, u0, dt, T, g, doplot=False)}: constructor     which uses the \texttt{super()} function to inherit the base class constructor. The other problem parameters passed to the constructor are the function space, the diffusivity constant, the source term, the initial condition, the time step, the final step, the Neumann boundary condition at the inlet and a boolean variable to plot the solution at each time step. 
+    \item \texttt{set\_parameters(self,V,k,f,u0,dt,T,g)}: function to set different problem parameters
+    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method and imposing a Neumann conditiona at the inlet boundary. The solution at each time step is stored in a list, as well as the time instants. 
     % decidere se si può mettere in degli numpy array 
-    \item \texttt{plot\_solution}: it takes as input the solution at a specific time 
-    step and it plots it.
+    \item \texttt{plot\_solution(self,u)}: it takes as input the solution at a specific time step and it plots it.
 \end{itemize}
 
+The second abstract base class \texttt{DataGenerator} contains the following methods:
+\begin{itemize}
+    \item \texttt{\_\_init\_\_(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object
+    \item \texttt{flux(self)}: abstract method 
+    \item \texttt{inlet\_flux(self)}: abstract method
+    \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
+    \item \texttt{nodes\_data(self)}: this function save as attribute of the object
+    a dictionary containing the time independent nodes features. The keys of the dictionary
+    are strings with the name of the features and the values are list (numpy array) containing 
+    the values at each node.
+    \item \texttt{td\_nodes\_data(self)}: abstract method
+    \item \texttt{create\_edges(self)}: it stores as attributes of the object two lists (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the nodes ID of the source nodes of every edge and the node ID of the destination nodes.
+    \item \texttt{edges\_data(self)}: it stores as attributes of the object a dictionary    containing the edge feature. The dictionary structure is analogous to the one of the node features.
+    \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array ?  
+    \item \texttt{save\_graph(self, fields\_names, output\_dir)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns s dgl graph which is generated calling some functions defined in \texttt{generate\_graphs.py}, that will be described in the next section. 
+\end{itemize}
+
+As for the \texttt{Solver} class, the abstract methods are overriden in the two child classes \texttt{DataNS}
+and \texttt{DataHeat}. The \texttt{DataHeat} class includes these methods:
+\begin{itemize}
+    \item \texttt{\_\_init\_\_(self,solver,mesh)}: constructor inherited from the parent class. 
+    \item \texttt{flux(self,tag,u)}: method overriden from the parent class, it computes the heat flux of the solution \(u\) at the interface corresponding to the tag passed as input.
+    \item \texttt{inlet\_flux(self,tag,u)}: method overriden from the parent class, it computes the heat flux at the inlet. The solution \(u\) and the tag of the inlet boundary are passe as input. 
+    \item \texttt{td\_nodes\_data(self)}: methos overriden from the parent class, it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as key the time instant and as value a numpy array containg the heat flux at that time instant at each node.
+    \item \texttt{save\_graphs}: method inherited from the parent class using the \texttt{super()} function, but the input \texttt{fields\_names} is a list containing only the string \texttt{'flux'}.
+\end{itemize}
+
+The \texttt{DataNS} is build analogously, with the only difference that the time dependent features are the flow rate and the pressure instead of the heat flux. In this case, the \texttt{flux} and \texttt{inlet\_flux} method computes the flow rate at the interfaces and at the inlet respectively. In addition, the class has a method \texttt{outlet\_flux} that computes the flow rate at the outlet and two other methods \texttt{mean\_pressure\_interface} and \texttt{mean\_pressure\_boundaries} that computes the mean pressure at the interfaces and at the inlet and outlet boundaries respectively.
+
 \subsection{Graph generation}
+In this section we describe the functions defined in \texttt{generate\_graphs.py} that are used to generate a dgl graph from the data obtained from the \texttt{DataGenerator} class. This file contains three functions: 
+\begin{itemize}
+    \item \texttt{generate\_graph(point\_data, points, edges\_data, edges1, edges2)}: this function takes as input a dictionary containing the time independent node features, a list (o numpy array) with the node coordinates, a dictionary containing the edge features and two lists containing the source and destination nodes of the edges. It return a dgl graph with the node and edge features stored as pytorch tensors.
+    \item \texttt{add\_fields(graph, field, field\_name, offset=0)}: function to add a time dependent feature to the dgl graph. It take as input the dgl graph, a dictionary containing the field values at each time step, the name of the field and an offset with the number of time steps to skip. It returns the dgl graph with the new field added.
+    \item \texttt{save\_graph(filename, output\_dir)}: function to save the dgl graph in a file in the output directory.
+\end{itemize}
 
 \subsection{Graph Neural Network}
 

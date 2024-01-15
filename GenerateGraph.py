@@ -24,20 +24,18 @@ def generate_graph(point_data, points, edges_data, edges1, edges2):
     # indices = {"inlet": inlet, "outlets": outlets}
 
     graph = dgl.graph((edges1, edges2), idtype=th.int32)
-    k = max(point_data['k'])
-    # int_length = max(point_data['interface_length'])
-    area = max(edges_data['area'])
-    length = max(edges_data['length'])
+    # k = max(point_data['k'])
+    # length = max(edges_data['length'])
     graph.ndata["x"] = th.tensor(points, dtype=th.float32)
-    graph.ndata["k"] = th.reshape(th.ones(graph.num_nodes(), dtype=th.float32) * k, (-1, 1, 1))
+    graph.ndata["k"] = th.reshape(th.ones(graph.num_nodes(), dtype=th.float32) * point_data['k'], (-1, 1, 1))
+    # graph.ndata["k"] = th.reshape(th.tensor(point_data['k'], dtype=th.float32), (-1, 1, 1))
     graph.ndata["NodeId"] = th.tensor(point_data['NodeId'], dtype=th.float32)
     graph.ndata["inlet_mask"] = th.tensor(point_data['inlet_mask'], dtype=th.float32)
     graph.ndata["outlet_mask"] = th.tensor(point_data['outlet_mask'], dtype=th.float32)
-    # graph.ndata["interface_length"] = th.reshape(th.ones(graph.num_nodes(), dtype=th.float32) * int_length, (-1, 1, 1))
     graph.ndata["interface_length"] = th.reshape(th.tensor(point_data['interface_length'], dtype=th.float32), (-1, 1, 1))
     graph.edata["EdgeId"] = th.tensor(edges_data['edgeId'], dtype=th.float32)
-    graph.edata["area"] = th.reshape(th.ones(graph.num_edges(), dtype=th.float32) * area, (-1, 1, 1))
-    graph.edata["length"] = th.reshape(th.ones(graph.num_edges(), dtype=th.float32) * length, (-1, 1, 1))
+    graph.edata["area"] = th.reshape(th.tensor(edges_data['area'], dtype=th.float32), (-1, 1, 1))
+    graph.edata["length"] = th.reshape(th.tensor(edges_data['length'], dtype=th.float32), (-1, 1, 1))
     return graph
 
 
