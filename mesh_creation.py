@@ -23,14 +23,16 @@ for it in range(args.nmesh):
     model = gmsh.model
     lc = args.lc
     w = args.wmax
+    wold = 0
     points = []
     for i in range(args.nodes):
         h = round(np.random.uniform(args.hmin, args.hmax),2)
-        # if args.spacing:
-        #     w = round(np.random.uniform(args.wmin, args.wmax),2)
-        points += [gmsh.model.geo.addPoint(i*w, -h, 0, lc)]
-        points += [gmsh.model.geo.addPoint(i*w, h, 0, lc)]
-
+        if args.spacing:
+            w = round(np.random.uniform(args.wmin, args.wmax),2)
+            
+        points += [gmsh.model.geo.addPoint(w + wold, -h, 0, lc)]
+        points += [gmsh.model.geo.addPoint(w + wold, h, 0, lc)]
+        wold += w
     # Define the rectangle coordinates
     print(points)
 
@@ -67,7 +69,7 @@ for it in range(args.nmesh):
 
     # Write mesh data:
     gmsh.option.setNumber("Mesh.MshFileVersion",2.2)
-    gmsh.write(f"data/mesh_long/RandomMesh_{it}.msh")
+    gmsh.write(f"data/mesh_test/RandomMesh_{it}.msh")
 
     # Creates graphical user interface
     #if 'close' not in sys.argv:

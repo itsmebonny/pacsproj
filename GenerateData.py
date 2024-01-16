@@ -8,54 +8,6 @@ import torch as th
 import matplotlib as mpl  #temporaneo
 
 
-class MeshLoader:
-
-    def __init__(self,filename):
-        # store the input mesh file name
-        self.meshfile = filename
-
-        # load the mesh from xml file 
-        self.mesh = Mesh(self.meshfile + ".xml")
-
-        # create a MeshFunction for boundaries and physical regions
-        self.bounds = MeshFunction("size_t", self.mesh, self.meshfile + "_facet_region.xml")
-        self.face = MeshFunction("size_t", self.mesh, self.meshfile + "_physical_region.xml")
-    
-    
-    def update_tags(self,tags):
-        """
-        Method to save the tags of the boundaries and faces of the mesh
-
-        The method takes as input a dictionary with the following keys: 
-        'walls', 'inlet', 'outlet', 'interface', 'faces' and as values a list of the corresponding tags
-        """
-        self.tags = tags
-        self.rename_boundaries = MeshFunction("size_t", self.mesh,1)
-        self.rename_boundaries.set_all(0)
-        self.rename_faces = MeshFunction("size_t", self.mesh, 2)
-        self.rename_faces.set_all(0)
-        for j in self.tags:
-            if j != "faces":
-                for i in self.tags[j]:
-                    self.rename_boundaries.array()[self.bounds.array()==i] = i
-            else:
-                for i in self.tags[j]:
-                    self.rename_faces.array()[self.face.array()==i] = i
-
-    # method to define measures for integration over boundaries and faces
-    def measure_definition(self):
-
-        # Define measure for integration over external boundaries (inlet and outlet)
-        self.dS = Measure("dS",domain=self.mesh, subdomain_data=self.rename_boundaries)
-
-        # Define measure for integration over internal boundaries (interface)
-        self.ds = Measure("ds",domain=self.mesh, subdomain_data=self.rename_boundaries)
-
-        # Define measure for integration over faces
-        self.dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)
-
-        return self.dS, self.ds, self.dx
-
             
 class Solver(ABC):
     
@@ -77,20 +29,54 @@ class Solver(ABC):
 
 class Stokes(Solver):
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
-        self.V = VectorElement("P", self.mesh.mesh.ufl_cell(), 2)
-        self.Q = FiniteElement("P", self.mesh.mesh.ufl_cell(), 1)
-        self.rho = 1*1e3
-        self.mu = 4*1e-6
-        self.U0 = 0.001
-        self.L0 = 0.001
-        self.inflow = Expression(("(-1.0/4.0*x[1]*x[1] + 1)", " 0.0 "), degree=2)
-        self.dt = 0.5
-        self.T = 10
-        self.f = Constant((0.0, 0.0))
+    def __init__(self, mesh, V, Q, rho, mu, U0, L0, inflow, f, dt, T, doplot=False):
+        """
+        Initialize the GenerateData class.
 
-    def set_parameters(self,V,Q,rho,mu,U0,L0,inflow, f, dt, T):
+        Parameters:
+        - mesh: the mesh object
+        - V: velocity function space
+        - Q: pressure function space
+        - rho: density
+        - mu: dynamic viscosity
+        - U0: characteristic velocity
+        - L0: characteristic length
+        - inflow: inflow boundary condition
+        - f: source term
+        - dt: time step
+        - T: final time
+        - doplot: flag to plot solution at each time step (default: False)
+        """
+        super().__init__(mesh)
+        self.V = V
+        self.Q = Q
+        self.rho = rho
+        self.mu = mu
+        self.U0 = U0
+        self.L0 = L0
+        self.inflow = inflow
+        self.f = f
+        self.dt = dt
+        self.T = T
+        self.doplot = doplot
+
+
+    def set_parameters(self, V, Q, rho, mu, U0, L0, inflow, f, dt, T):
+        """
+        Set the parameters for the simulation.
+
+        Args:
+            V (float): Velocity of the fluid.
+            Q (float): Flow rate of the fluid.
+            rho (float): Density of the fluid.
+            mu (float): Viscosity of the fluid.
+            U0 (float): Initial velocity of the fluid.
+            L0 (float): Initial length of the fluid.
+            inflow (float): Inflow rate of the fluid.
+            f (float): Force applied to the fluid.
+            dt (float): Time step for the simulation.
+            T (float): Total time for the simulation.
+        """
         self.V = V
         self.Q = Q
         self.rho = rho
@@ -103,6 +89,12 @@ class Stokes(Solver):
         self.T = T
 
     def solve(self):
+        """
+        Solves the variational problem for velocity and pressure.
+
+        Returns:
+            None
+        """
         TH = self.V *self.Q
         W = FunctionSpace(self.mesh.mesh, TH)
 
@@ -151,31 +143,73 @@ class Stokes(Solver):
             temp2.vector()[:] = p0.vector()[:]
             self.pt[t] = temp2
 
+            if self.doplot:
+                self.plot_solution(u,p)
+
             t+=1
 
         self.u = u*self.U0
         self.p = p*self.rho*self.U0*self.U0
 
-    def plot_solution(self):
-        pass
+    def plot_solution(self, u, p):
+        """
+        Plot the solution u and p.
+
+        Parameters:
+        u (array-like): The solution u.
+        p (array-like): The solution p.
+        """
+        sol1 = plot(u)
+        plt.colorbar(sol1)
+        plt.show()
+        sol2 = plot(p)
+        plt.colorbar(sol2)
+        plt.show()
 
 
 # Define a subclass Heat that inherits from the Solver abstract base class to solve Heat equation
 class Heat(Solver):
+    """
+    Class representing a heat solver.
+
+    This class inherits from the Solver class and provides methods to solve the heat equation
+    using the Discontinuous Galerkin method with non-homogeneous Neumann boundary conditions.
+
+    Attributes:
+        V (FunctionSpace): Function space for the solution.
+        k (float): Thermal conductivity.
+        f (Expression): Source term.
+        u0 (Expression): Initial condition.
+        dt (float): Time step.
+        T (float): Final time.
+        g (Expression): Neumann boundary condition at the inlet.
+        doplot (bool): Flag indicating whether to plot the solution at each time step.
+    """
 
     def __init__(self, mesh, V, k, f, u0, dt, T, g, doplot=False):
         super().__init__(mesh)
-        self.V = V # FunctionSpace
-        self.k = k # Thermal conductivity
-        self.f = f # Source term
-        self.u0 = u0 # Initial condition
-        self.dt = dt # Time step
-        self.T = T # Final time
-        self.g = g # Neumann boundary condition at inlet
-        self.doplot = doplot # Plot solution at each time step
+        self.V = V
+        self.k = k
+        self.f = f
+        self.u0 = u0
+        self.dt = dt
+        self.T = T
+        self.g = g
+        self.doplot = doplot
 
-    # Method to set different parameters 
-    def set_parameters(self,V,k,f,u0,dt,T,g):
+    def set_parameters(self, V, k, f, u0, dt, T, g):
+        """
+        Method to set different parameters for the heat solver.
+
+        Args:
+            V (FunctionSpace): Function space for the solution.
+            k (float): Thermal conductivity.
+            f (Expression): Source term.
+            u0 (Expression): Initial condition.
+            dt (float): Time step.
+            T (float): Final time.
+            g (Expression): Neumann boundary condition at the inlet.
+        """
         self.V = V
         self.k = k
         self.f = f
@@ -185,15 +219,16 @@ class Heat(Solver):
         self.g = g
 
     def solve(self):
-
         """
-        Method to solve the Heat equation.
+        Method to solve the heat equation.
 
-        The problem is solved using Discontinuous Galerkin method 
-        and imposing non-homogeneuos Neumann boundary condition at the inlet 
+        The problem is solved using the Discontinuous Galerkin method 
+        and imposing non-homogeneous Neumann boundary condition at the inlet 
         and homogeneous Neumann boundary condition at the outlet and walls.
-        """
 
+        Returns:
+            numpy.ndarray: Array of solutions at each time step.
+        """
         t = float(self.dt)
         u0 = interpolate(self.u0,self.V)
         U = Function(self.V)
@@ -233,7 +268,16 @@ class Heat(Solver):
 
 
     # Method to plot the solution
-    def plot_solution(self,u):
+    def plot_solution(self, u):
+        """
+        Plot the solution.
+
+        Args:
+            u: The solution to be plotted.
+
+        Returns:
+            None
+        """
         sol = plot(u)
         plot(u)
         plt.colorbar(sol)
@@ -241,8 +285,18 @@ class Heat(Solver):
            
 
 class DataGenerator(ABC):
-    
+    """
+    This class represents a data generator for a solver on a given mesh.
+    """
+
     def __init__(self, solver, mesh):
+        """
+        Initializes the DataGenerator object.
+
+        Args:
+            solver: The solver object.
+            mesh: The mesh object.
+        """
         self.solver = solver
         self.mesh = mesh
         self.n = FacetNormal(self.mesh.mesh)
@@ -251,17 +305,42 @@ class DataGenerator(ABC):
 
     @abstractmethod
     def flux(self):
+        """
+        Abstract method to calculate the flux.
+        """
         pass
 
     @abstractmethod
     def inlet_flux(self,tag, u):
+        """
+        Abstract method to calculate the inlet flux.
+
+        Args:
+            tag: The tag of the inlet.
+            u: The velocity.
+        """
         pass
 
     def area(self,tag):
+        """
+        Calculates the area of a given tag.
+
+        Args:
+            tag: The tag of the area.
+
+        Returns:
+            The area of the tag.
+        """
         area = assemble(Constant(1.0)*self.mesh.dx(tag))
         return area
 
     def create_edges(self):
+        """
+        Creates the edges of the mesh.
+
+        Returns:
+            The edges of the mesh.
+        """
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
         self.edges1 = self.NodesData['NodeId'][:-1]
@@ -269,6 +348,12 @@ class DataGenerator(ABC):
         return self.edges1,self.edges2
     
     def edges_data(self):
+        """
+        Calculates the data of the edges.
+
+        Returns:
+            The data of the edges.
+        """
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
         dict_e = {'area': np.zeros(self.NNodes-1), 'length': np.zeros(self.NNodes-1)}
@@ -280,6 +365,12 @@ class DataGenerator(ABC):
         return dict_e
 
     def nodes_data(self):
+        """
+        Calculates the data of the nodes.
+
+        Returns:
+            The data of the nodes.
+        """
         if not hasattr(self, 'center_line'):
             self.centerline()
         dict = {'k': self.solver.k, 'inlet_mask': np.zeros(self.NNodes,dtype=bool), 'outlet_mask':np.zeros(self.NNodes,dtype=bool), 'interface_length': np.zeros(self.NNodes)}
@@ -302,11 +393,19 @@ class DataGenerator(ABC):
 
     @abstractmethod
     def td_nodes_data(self):
+        """
+        Abstract method to calculate the time-dependent data of the nodes.
+        """
         pass
 
-    # Method to calculate the centerline coordinates of the mesh, which are the coordinates of the graph nodes
     def centerline(self):
-        center_line = np.zeros((self.NNodes,2)) # dovrebbe essere un array di array (comunemente detto lista di liste)
+        """
+        Calculates the centerline coordinates of the mesh.
+
+        Returns:
+            The centerline coordinates of the mesh.
+        """
+        center_line = np.zeros((self.NNodes,2)) # should be an array of arrays (commonly known as list of lists)
         tags_list = ['inlet','interface','outlet']
         it=0
         for j in tags_list:
@@ -328,6 +427,16 @@ class DataGenerator(ABC):
         return center_line
 
     def save_graph(self, fields_names, output_dir = "data/graphs/"):
+        """
+        Saves the graph with the specified fields.
+
+        Args:
+            fields_names: The names of the fields.
+            output_dir: The output directory to save the graph.
+
+        Returns:
+            The saved graph.
+        """
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
         if not hasattr(self, 'TDNodesData'):
@@ -346,38 +455,106 @@ class DataGenerator(ABC):
         return self.graph
 
 class DataNS(DataGenerator):
+    """
+    This class represents a data generator for solving the Navier-Stokes equations.
+    It inherits from the DataGenerator class.
+    """
 
     def __init__(self, solver, mesh):
+        """
+        Constructor for the DataNS class.
+
+        Parameters:
+        - solver: The solver object used for solving the Navier-Stokes equations.
+        - mesh: The mesh object representing the computational domain.
+        """
         super().__init__(solver, mesh)
 
     def flux(self,tag,u):
+        """
+        Calculates the flux of a given variable across a specified tag.
+
+        Parameters:
+        - tag: The tag representing the boundary or interface.
+        - u: The variable to calculate the flux for.
+
+        Returns:
+        - total_flux: The total flux of the variable across the tag.
+        """
         flux = dot(u, self.n('+'))*self.mesh.dS(tag)
         total_flux = assemble(flux)
         return total_flux
 
     def inlet_flux(self,tag, u):
+        """
+        Calculates the inlet flux of a given variable across a specified tag.
+
+        Parameters:
+        - tag: The tag representing the inlet boundary.
+        - u: The variable to calculate the flux for.
+
+        Returns:
+        - total_flux: The total inlet flux of the variable across the tag.
+        """
         flux = -dot(u, self.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
 
     def outlet_flux(self,tag, u):
+        """
+        Calculates the outlet flux of a given variable across a specified tag.
+
+        Parameters:
+        - tag: The tag representing the outlet boundary.
+        - u: The variable to calculate the flux for.
+
+        Returns:
+        - total_flux: The total outlet flux of the variable across the tag.
+        """
         flux = dot(u, self.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
     
     def mean_pressure_interface(self,tag,p):
+        """
+        Calculates the mean pressure across a specified interface.
+
+        Parameters:
+        - tag: The tag representing the interface.
+        - p: The pressure variable.
+
+        Returns:
+        - mean_p: The mean pressure across the interface.
+        """
         mean_p = p*self.mesh.dS(tag)
         length = assemble(Constant(1.0)*self.mesh.dS(tag))
         mean_p = assemble(mean_p)
         return mean_p/length
 
     def mean_pressure_boundaries(self,tag,p):
+        """
+        Calculates the mean pressure across a specified boundary.
+
+        Parameters:
+        - tag: The tag representing the boundary.
+        - p: The pressure variable.
+
+        Returns:
+        - mean_p: The mean pressure across the boundary.
+        """
         mean_p = p*self.mesh.ds(tag)
         length = assemble(Constant(1.0)*self.mesh.ds(tag))
         mean_p = assemble(mean_p)
         return mean_p/length
             
     def td_nodes_data(self):
+        """
+        Calculates the time-dependent data for the nodes.
+
+        Returns:
+        - td_dict_u: A dictionary containing the time-dependent data for the velocity.
+        - td_dict_p: A dictionary containing the time-dependent data for the pressure.
+        """
         td_dict_u = {}
         td_dict_p = {}
         for t in range(len(self.solver.ts)):
@@ -401,41 +578,97 @@ class DataNS(DataGenerator):
         return td_dict_u, td_dict_p
 
     def save_graph(self,fields_names=['flow_rate','pressure'], output_dir = "data/graphs/"):
+        """
+        Saves the graphs of specified fields.
+
+        Parameters:
+        - fields_names: A list of field names to save the graphs for. Default is ['flow_rate', 'pressure'].
+        - output_dir: The directory to save the graphs in. Default is "data/graphs/".
+
+        Returns:
+        - The result of the super class's save_graph method.
+        """
         return super().save_graph(fields_names,output_dir)
     
 
 # Define a subclass DataHeat that inherits from the DataGenerator abstract base class
 class DataHeat(DataGenerator):
+    """
+    This class represents a data generator for solving heat transfer problems.
+    It inherits from the DataGenerator class.
+    """
 
     def __init__(self, solver, mesh):
+        """
+        Constructor for the DataHeat class.
+
+        Parameters:
+        - solver: The solver object for heat transfer equations.
+        - mesh: The mesh object representing the computational domain.
+        """
         super().__init__(solver, mesh)
 
     
-    def flux(self,interface, u):
-        flux = -self.solver.k*dot(grad(u)('+'), self.n('+'))*self.mesh.dS(interface)
+    def flux(self, interface, u):
+        """
+        Calculates the heat flux across an interface.
+
+        Parameters:
+        - interface: The interface tag.
+        - u: The temperature field.
+
+        Returns:
+        - total_flux: The total heat flux across the interface.
+        """
+        flux = -self.solver.k * dot(grad(u)('+'), self.n('+')) * self.mesh.dS(interface)
         total_flux = assemble(flux)
         return total_flux
     
-    def inlet_flux(self,tag, u):
-        flux = self.solver.k*dot(grad(u), self.n)*self.mesh.ds(tag)
+    def inlet_flux(self, tag, u):
+        """
+        Calculates the heat flux at an inlet boundary.
+
+        Parameters:
+        - tag: The boundary tag.
+        - u: The temperature field.
+
+        Returns:
+        - total_flux: The total heat flux at the inlet boundary.
+        """
+        flux = self.solver.k * dot(grad(u), self.n) * self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
 
     def td_nodes_data(self):
+        """
+        Calculates the time-dependent data for the nodes.
+
+        Returns:
+        - td_dict: A dictionary containing the time-dependent data for the temperature.
+        """
         td_dict = {}
         for t in range(len(self.solver.ts)):
-            
             td_dict[self.solver.ts[t]] = np.zeros(self.NNodes)
             it = 0
             for i in self.mesh.tags['inlet']:
-                td_dict[self.solver.ts[t]][it] = self.inlet_flux(i,self.solver.ut[t])
-                it+=1
+                td_dict[self.solver.ts[t]][it] = self.inlet_flux(i, self.solver.ut[t])
+                it += 1
             for i in self.mesh.tags['interface']:
-                td_dict[self.solver.ts[t]][it] = self.flux(i,self.solver.ut[t])  
-                it+=1    
+                td_dict[self.solver.ts[t]][it] = self.flux(i, self.solver.ut[t])  
+                it += 1    
 
         self.TDNodesData = [td_dict]
         return td_dict
     
-    def save_graph(self, fields_names=['flux'],output_dir = "data/graphs/"):
-        return super().save_graph(fields_names,output_dir)
+    def save_graph(self, fields_names=['flux'], output_dir="data/graphs/"):
+        """
+        Saves the graphs of specified fields.
+
+        Parameters:
+        - fields_names: A list of field names to save the graphs for. Default is ['flux'].
+        - output_dir: The directory to save the graphs in. Default is "data/graphs/".
+
+        Returns:
+        - The result of the super class's save_graph method.
+        """
+        return super().save_graph(fields_names, output_dir)

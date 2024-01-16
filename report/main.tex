@@ -66,6 +66,8 @@
 \usepackage{stfloats} % Correct position of the tables
 \usepackage{multirow}
 \usepackage{multicol}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
 
 
 
@@ -197,10 +199,38 @@ As edge features we consider the area of thecorresponding trapezoid and the dist
 % gNN
 
 \subsection{Mesh creation}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[>=Stealth, node distance=2cm, class/.style={draw, rectangle, align=center, minimum width=3cm, minimum height=1.5cm}]
+
+        % MeshCreator class
+        \node[class] (MeshCreator) {MeshCreator};
+        \node[class, below=of MeshCreator] (MeshLoader) {MeshLoader};
+
+        % Arrows indicating composition
+        \draw[->] (MeshCreator.south) -- ++(0,-0.5) -| (MeshLoader.north) node[midway, right] {Composition};
+
+        % MeshLoader attributes and methods
+        \node[below=0.5cm of MeshLoader] {Attributes and Methods};
+
+        % MeshCreator attributes and methods
+        \node[below=0.5cm of MeshCreator] {Attributes and Methods};
+
+    \end{tikzpicture}
+    \caption{Class Diagram for MeshCreator and MeshLoader}
+\end{figure}
 
 \subsection{Data generation}
 
-\texttt{GenerateData.py} contains two abstract classes: \texttt{Solver} and \texttt{DataGenerator}. The first one is used to solve the variational problem, while the second one is designed to store all the quantities of interest whichwill be used to build the graphs. Each of these parent classes has two child classes: we start describing the solver one. 
+\texttt{GenerateData.py} contains two abstract classes: \texttt{Solver} and \texttt{DataGenerator}. The first one is used to solve the variational problem, while the second one is designed to store all the quantities of interest whichwill be used to build the graphs. Each of these parent classes has two child classes: we start describing the solver one.
+A diagram of the \texttt{Solver} class structure and methods is shown in Figure \ref{solver_class}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Images/solver_class.png}
+    \caption{Graph generated from the solution of the heat equation.}
+    \label{solver_class}
+\end{figure}
 
 The abstract base class \texttt{Solver} contains the following methods:
 \begin{itemize}
@@ -222,7 +252,16 @@ The \texttt{Heat} class contains the following methods overriden from the parent
     \item \texttt{plot\_solution(self,u)}: it takes as input the solution at a specific time step and it plots it.
 \end{itemize}
 
-The second abstract base class \texttt{DataGenerator} contains the following methods:
+The second abstract base class \texttt{DataGenerator} is schematized in Figure \ref{datagenerator_class}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{Images/datagenerator_class.png}
+    \caption{Graph generated from the solution of the heat equation.}
+    \label{datagenerator_class}
+\end{figure}
+
+It contains the following methods:
 \begin{itemize}
     \item \texttt{\_\_init\_\_(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object
     \item \texttt{flux(self)}: abstract method 
