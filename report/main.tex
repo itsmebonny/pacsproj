@@ -370,6 +370,33 @@ The method inside this class are the following:
     \item \texttt{forward}: this method is the one that actually computes the forward step of the network. It encodes both nodes and edges to the latent space, then perform a loop of processing iterations and finally decodes both nodes and edges to the output space. It returns the predicted update of the system state.
 \end{itemize}
 
+\subsubsection*{Training}
+
+Here we describe the training process more in detail. The process is done using the \texttt{training.py} file and the \texttt{rollout.py} file. The first one is used to perform the steps necessary to train the network, like backpropagation and loss computation, while the second one is used to perform the forward step of the network and compute the predictions.
+
+The training of the network starts with the definition of its hyperparameters 
+
+
+
+da sistemare gli spazi ma ora non ho voglia di cercare la soluzione
+\begin{verbatim*}
+{'latent_size_gnn', # size of the latent space of the Graph Neural Network 
+'latent_size_mlp', # size of the latent space of each MLP
+'process_iterations', # number of iterations of the process step
+'number_hidden_layers_mlp', # number of hidden layers of each MLP
+'learning_rate', # learning rate of the optimizer
+'batch_size', # batch size
+'lr_decay', # learning rate decay
+'nepochs', # number of epochs
+'weight_decay', # weight decay for the optimizer
+'rate_noise', # rate of noise
+'rate_noise_features', # rate of noise features
+'stride', # stride
+'bcs_gnn'} # boundary conditions of the GNN
+\end{verbatim*}
+
+With all the hyperparameters set, we can start the training process. Since this part of the code was only modified by us, we will not go into much detail, but we will only describe the main steps. The training starts by taking a dataset composed of \texttt{DGL} graphs, which are split into a train set and a test set. Then are defined a loss (MSE) and a metric (MAE). The dataset is created in such a way that to train the network on all the graphs a map is needed so that when a single time-step is evaluated, the network is able to map that single time-step to the correct graph. The time-step is performed using the function \texttt{perform\_timestep} from the \texttt{rollout.py} file. This function takes as input the model, the graph and the previous time-step and predict the value of the quantity of interest at the next step in time. This function is used also when evaluating the model since when we use it while training we compute the loss between the model's prediction and the ground truth, updating the weights of the network accordingly, while when we compute the rollout errors we use the model in inference mode and then compute the error between the prediction and the ground truth.
+
 %mancano commenti su training.py
 
 %-----------------------------------------------------------------------------
