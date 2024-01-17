@@ -80,6 +80,9 @@
 \newcommand{\e}[1]{\times 10^{#1}}  % Powers of 10 notation
 \newcommand{\mathbbm}[1]{\text{\usefont{U}{bbm}{m}{n}#1}} % From mathbbm.sty
 \newcommand{\pdev}[2]{\frac{\partial#1}{\partial#2}}
+\newlength{\dunder}
+\setlength{\dunder}{0.5em}
+\newcommand{\twound}{\rule{2\dunder}{0.4pt}}
 % NB: you can also override some existing commands with the keyword \renewcommand
 
 %----------------------------------------------------------------------------
@@ -157,11 +160,10 @@ A forward step of the GNN is composed by three stages:
 \end{enumerate}
 After this forward step, the state variables can be updated as \(\Theta^{n+1} = \Theta^{n} + \delta\Theta^{n}\).
 
-% aggiungere tipo la loss 
-
-
+% qui dovremmo spiegare la loss che si usa e anche tutti gli altri parametri che si possono modificare che ho messo nella tabella sotto
 
 \subsection{Test case: heat equation}
+
 In this work, we consider the heat equation as test case. 
 The mathematical formulation of the problem is the following:
 \begin{equation}
@@ -179,12 +181,31 @@ We generated 20 different mesh using gmsh.
 Then we solved the problem in FEniCS using Discontinuous Galerkin method and implicit Euler for time discretization, imposing as Neumann condition at inlet \(h = 2e^{-(t-2.5)^2}\).
 From these solutions we generated a dataset of 277 graphs. 
 Each graph has 5 nodes: an inlet node, an outlet node and 3 nodes in correspondence of the interfaces. 
-As descriptor of the state of the system we consider the heat flux at each time step, which is computed as the integral of the normal derivative of the solution on the interface. The other node features are the thermal diffusivity \(k\), the interface length and the nodal type (inlet, outlet or branch node). 
+As descriptor of the state of the system we consider the heat flux at each time step, which is computed as the integral of the normal derivative of the temperature on the interface. The other node features are the thermal diffusivity \(k\), the interface length and the nodal type (inlet, outlet or branch node). 
 As edge features we consider the area of the corresponding trapezoid and the distance between the nodes connected by the edge. 
+The graph neural newtork is trained for 100 epochs on this dataset, a list of the hyperparameters used is shown in Table \ref{hyperparams}.
 
-% tabella con le varie features?
-
-% training della GNN con i parametri
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Parameter} & \textbf{Value} \\
+        \hline
+        batch size & 32 \\
+        learning rate decay & 0.001 \\
+        learning rate & 0.01 \\
+        rate noise & 5 \\
+        rate noise features & \(10^{-5}\) \\
+        l2 regularization & \(10^{-5}\) \\
+        latent size gnn & 8 \\
+        latent size mlps & 16\\
+        normalization type & 1 (normal) \\
+        stride & 5 \\
+        \hline   
+    \end{tabular}
+    \caption{Hyperparameters used for the GNN training.}
+    \label{hyperparams}
+\end{table}
 
 %-----------------------------------------------------------------------------
 % Code
@@ -192,33 +213,59 @@ As edge features we consider the area of the corresponding trapezoid and the dis
 
 \section{Code}
 
-% introduzione sulla struttura del nostro codice:
-% mesh creation con gmsh -> potremmo creare una classe quindi magari 
-% GenerateData.py: classi mesh loader, solver, data generator 
-% GenerateGraph.py -> funzioni per generare i grafi 
-% gNN
+% qui farei un'introduzione su cosa si trova nella nostra repositery ma prima dobbiamo sistemarla 
 
 \subsection{Mesh creation}
+
+The \texttt{MeshUtils.py} file is responsible for creating 2D meshes. It contains two classes whose structure in shown in Figure \ref{mesh_class}. The first one is \texttt{MeshCreator} which is used to create meshes using \texttt{gmsh}, while the second one is  \texttt{MeshLoader} which is used to load the meshes created from a \texttt{.xml} file and extract all the features that will be used to solve the variational problem.
+
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}[>=Stealth, node distance=2cm, class/.style={draw, rectangle, align=center, minimum width=3cm, minimum height=1.5cm}]
-
-        % MeshCreator class
-        \node[class] (MeshCreator) {MeshCreator};
-        \node[class, below=of MeshCreator] (MeshLoader) {MeshLoader};
-
-        % Arrows indicating composition
-        \draw[->] (MeshCreator.south) -- ++(0,-0.5) -| (MeshLoader.north) node[midway, right] {Composition};
-
-        % MeshLoader attributes and methods
-        \node[below=0.5cm of MeshLoader] {Attributes and Methods};
-
-        % MeshCreator attributes and methods
-        \node[below=0.5cm of MeshCreator] {Attributes and Methods};
-
-    \end{tikzpicture}
-    \caption{Class Diagram for MeshCreator and MeshLoader}
+    \includegraphics[width=0.5\textwidth]{Images/mesh_class.png}
+    \caption{Classes and methods of \texttt{MeshUtils.py}.}
+    \label{mesh_class}
 \end{figure}
+
+The \texttt{MeshCreator} constructor takes as input command-line arguments, for this reason the file contains also a \texttt{main} function where we use the \texttt{argparse} Python module to handle command-line arguments. 
+The possible arguments that can be modified by the user are summarized in Table \ref{args}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Argument} & \textbf{Description} \\
+        \hline
+        nmesh & number of meshes to create \\
+        nodes & number of nodes \\
+        lc & characteristic length of the mesh \\
+        hmax & maximum length of the interfaces \\
+        hmin & minimum length of the interfaces \\
+        seed & seed for random number generator \\
+        spacing & boolean variable, True if the interfaces are equispaced \\
+        wmax & maximum distance between the interfaces \\
+        wmin & minimum distance between the interfaces \\
+        \hline   
+    \end{tabular}
+    \caption{Command-line arguments.}
+    \label{args}
+\end{table}
+
+The method \texttt{create\_mesh} generates nmesh new meshes using \texttt{gmsh} and the parameters passed to the constructor. The lengths of the intefaces are random numbers between hmin and hmax, while the distances between the interfaces are random numbers between wmin and wmax if the spacing argument is True, otherwhise they are equispaced and the distance is set equal to wmax. Different tags are assigned to the walls, the inlet boundary, the outlet boundary, each interface and each face. In the end, the meshes are saved in the \texttt{outpu\_dir} in \texttt{.msh} format.
+
+% poi le mesh vanno convertite in xml cosa devo dire? 
+
+The \texttt{MeshLoader} class is used to load a mesh from a \texttt{.xml} file. Teh constructor takes as input the name of the file and stores the following attributes:
+\begin{itemize}
+    \item \texttt{mesh}: FEniCS mesh object
+    \item \texttt{bounds}: FEniCS \texttt{MeshFunction} associated to the boundaries of the mesh
+    \item \texttt{face}: FEniCS \texttt{MeshFunction} associated to the faces of the mesh
+    \item \texttt{n}: outward-pointing normal vector to the mesh boundaries
+    \item \texttt{h}: minimun element size, used as characteristic length of the mesh
+\end{itemize}
+
+Another method of the class is \texttt{update\_tags(self,tags)}: this function takes as input a dictionary containing the tags of the mesh. This dictionary must be provided by the user and it has to contain the keys: 'walls', 'inlet', 'outlet', 'interface' and 'faces'. The values of the dictionary are lists of the corresponding tags. The method saves the tags so they can be used later in the code. 
+
+The last method is \texttt{measure\_definition(self)}: it return three \texttt{Mesure} FEniCS objects, which are used for integration over external boundaries, internal boundaries (interfaces) and faces. 
 
 \subsection{Data generation}
 
@@ -234,7 +281,7 @@ A diagram of the \texttt{Solver} class structure and methods is shown in Figure 
 
 The abstract base class \texttt{Solver} contains the following methods:
 \begin{itemize}
-    \item \texttt{\_\_init\_\_(self,mesh)}: costructor that takes as input a \texttt{MeshLoader} object 
+    \item \texttt{\(\twound\)init\(\twound\)(self,mesh)}: costructor that takes as input a \texttt{MeshLoader} object 
     \item \texttt{set\_parameters(self)}: abstract method
     \item \texttt{solve(self)}: abstract method
     \item \texttt{plot\_solution(self)}: abstract method
@@ -245,10 +292,9 @@ We focus on the description of the \texttt{Heat} class, since it is the one used
 
 The \texttt{Heat} class contains the following methods overriden from the parent class:
 \begin{itemize}
-    \item \texttt{\_\_init\_\_(self,mesh, V, k, f, u0, dt, T, g, doplot=False)}: constructor     which uses the \texttt{super()} function to inherit the base class constructor. The other problem parameters passed to the constructor are the function space, the diffusivity constant, the source term, the initial condition, the time step, the final step, the Neumann boundary condition at the inlet and a boolean variable to plot the solution at each time step. 
+    \item \texttt{\(\twound\)init\(\twound\)(self,mesh, V, k, f, u0, dt, T, g, doplot=False)}: constructor which uses the \texttt{super()} function to inherit the base class constructor. The other problem parameters passed to the constructor are the function space, the diffusivity constant, the source term, the initial condition, the time step, the final step, the Neumann boundary condition at the inlet and a boolean variable to plot the solution at each time step. 
     \item \texttt{set\_parameters(self,V,k,f,u0,dt,T,g)}: function to set different problem parameters
-    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method and imposing a Neumann conditiona at the inlet boundary. The solution at each time step is stored in a list, as well as the time instants. 
-    % decidere se si può mettere in degli numpy array 
+    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method and imposing a Neumann conditiona at the inlet boundary. The solution at each time step is stored in a numpy array, as well as the time instants. 
     \item \texttt{plot\_solution(self,u)}: it takes as input the solution at a specific time step and it plots it.
 \end{itemize}
 
@@ -263,25 +309,24 @@ The second abstract base class \texttt{DataGenerator} is schematized in Figure \
 
 It contains the following methods:
 \begin{itemize}
-    \item \texttt{\_\_init\_\_(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object
+    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object. It saves as attribute of the object \texttt{NNodes} which will be the number of nodes of the graph and it is set as the sum of the number of inlets, outlets and interfaces.
     \item \texttt{flux(self)}: abstract method 
     \item \texttt{inlet\_flux(self)}: abstract method
     \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
     \item \texttt{nodes\_data(self)}: this function save as attribute of the object
     a dictionary containing the time independent nodes features. The keys of the dictionary
-    are strings with the name of the features and the values are list (numpy array) containing 
-    the values at each node.
+    are strings with the name of the features and the values are numpy arrays containing the values at each node.
     \item \texttt{td\_nodes\_data(self)}: abstract method
-    \item \texttt{create\_edges(self)}: it stores as attributes of the object two lists (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the nodes ID of the source nodes of every edge and the node ID of the destination nodes.
+    \item \texttt{create\_edges(self)}: it stores as attributes of the object two numpy arrays (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the nodes ID of the source nodes of every edge and the node ID of the destination nodes.
     \item \texttt{edges\_data(self)}: it stores as attributes of the object a dictionary    containing the edge feature. The dictionary structure is analogous to the one of the node features.
-    \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array ?  
+    \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array of size \((NNodes,2)\).
     \item \texttt{save\_graph(self, fields\_names, output\_dir)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns s dgl graph which is generated calling some functions defined in \texttt{generate\_graphs.py}, that will be described in the next section. 
 \end{itemize}
 
 As for the \texttt{Solver} class, the abstract methods are overriden in the two child classes \texttt{DataNS}
 and \texttt{DataHeat}. The \texttt{DataHeat} class includes these methods:
 \begin{itemize}
-    \item \texttt{\_\_init\_\_(self,solver,mesh)}: constructor inherited from the parent class. 
+    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor inherited from the parent class. 
     \item \texttt{flux(self,tag,u)}: method overriden from the parent class, it computes the heat flux of the solution \(u\) at the interface corresponding to the tag passed as input.
     \item \texttt{inlet\_flux(self,tag,u)}: method overriden from the parent class, it computes the heat flux at the inlet. The solution \(u\) and the tag of the inlet boundary are passe as input. 
     \item \texttt{td\_nodes\_data(self)}: methos overriden from the parent class, it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as key the time instant and as value a numpy array containg the heat flux at that time instant at each node.
@@ -293,12 +338,15 @@ The \texttt{DataNS} is build analogously, with the only difference that the time
 \subsection{Graph generation}
 In this section we describe the functions defined in \texttt{generate\_graphs.py} that are used to generate a dgl graph from the data obtained from the \texttt{DataGenerator} class. This file contains three functions: 
 \begin{itemize}
-    \item \texttt{generate\_graph(point\_data, points, edges\_data, edges1, edges2)}: this function takes as input a dictionary containing the time independent node features, a list (o numpy array) with the node coordinates, a dictionary containing the edge features and two lists containing the source and destination nodes of the edges. It return a dgl graph with the node and edge features stored as pytorch tensors.
+    \item \texttt{generate\_graph(point\_data, points, edges\_data, edges1, edges2)}: this function takes as input a dictionary containing the time independent node features, a numpy array with the node coordinates, a dictionary containing the edge features and two numpy arrays containing the source and destination nodes of the edges. It return a dgl graph with the node and edge features stored as pytorch tensors.
     \item \texttt{add\_fields(graph, field, field\_name, offset=0)}: function to add a time dependent feature to the dgl graph. It take as input the dgl graph, a dictionary containing the field values at each time step, the name of the field and an offset with the number of time steps to skip. It returns the dgl graph with the new field added.
     \item \texttt{save\_graph(filename, output\_dir)}: function to save the dgl graph in a file in the output directory.
 \end{itemize}
 
 \subsection{Graph Neural Network}
+
+% qui dovremmo spiegare non come funziona la gnn teoricamente perché è già scritto sopra (e al massimo facciamo l'appendix) ma più che altro cosa fanno i vari file che ci sono (a grandi linee perché non l'abbiamo scritta noi) e tipo dire quali sono le parti che abbiamo modificato noi 
+
 The graph neural network used in this project is the one presented in \cite{Luca}, which is an adaptation of the MeshGraphNet implementation \cite{MeshGraphNet}, which we modified to make it suitable for our test case and extendable to other problems. The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features at that time step, and it predicts an update for the state variables. The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
 
 A forward step of the GNN is composed by three stages:
@@ -319,7 +367,11 @@ A forward step of the GNN is composed by three stages:
 % Further work
 %-----------------------------------------------------------------------------
 
+% prima di questo potremmo fare una section sulle istruzioni per runnare un test case se capiamo come farlo
+
 \section{Further work}
+
+% qui spieghiamo cosa si dovrebbe modificare per usare Stokes e in generale per usarla per altri problemi poi non lo so 
 
 %---------------------------------------------------------------------------
 %  BIBLIOGRAPHY

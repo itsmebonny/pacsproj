@@ -236,10 +236,8 @@ class Heat(Solver):
         # Define variational problem
         u=TrialFunction(self.V)
         v=TestFunction(self.V)
-        h = self.mesh.mesh.hmin()
-        n = FacetNormal(self.mesh.mesh)
         a_int=u*v*dx+self.dt*self.k*inner(grad(u),grad(v))*dx 
-        a_facet = self.k*(10/avg(h)*dot(jump(v,n),jump(u,n))*dS - dot(avg(grad(v)), jump(u, n))*dS - dot(jump(u, n), avg(grad(v)))*dS)
+        a_facet = self.k*(10/avg(self.mesh.h)*dot(jump(v,self.mesh.n),jump(u,self.mesh.n))*dS - dot(avg(grad(v)), jump(u, self.mesh.n))*dS - dot(jump(u, self.mesh.n), avg(grad(v)))*dS)
 
         a = a_int + a_facet
         L=u0*v*dx+self.dt*self.f*v*dx + self.g*v*self.dt*self.mesh.ds(self.mesh.tags['inlet'][0])
@@ -299,8 +297,6 @@ class DataGenerator(ABC):
         """
         self.solver = solver
         self.mesh = mesh
-        self.n = FacetNormal(self.mesh.mesh)
-        self.h = self.mesh.mesh.hmin()
         self.NNodes = len(self.mesh.tags['interface']) + len(self.mesh.tags['inlet']) + len(self.mesh.tags['outlet'])
 
     @abstractmethod
@@ -481,7 +477,7 @@ class DataNS(DataGenerator):
         Returns:
         - total_flux: The total flux of the variable across the tag.
         """
-        flux = dot(u, self.n('+'))*self.mesh.dS(tag)
+        flux = dot(u, self.mesh.n('+'))*self.mesh.dS(tag)
         total_flux = assemble(flux)
         return total_flux
 
@@ -496,7 +492,7 @@ class DataNS(DataGenerator):
         Returns:
         - total_flux: The total inlet flux of the variable across the tag.
         """
-        flux = -dot(u, self.n)*self.mesh.ds(tag)
+        flux = -dot(u, self.mesh.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
 
@@ -511,7 +507,7 @@ class DataNS(DataGenerator):
         Returns:
         - total_flux: The total outlet flux of the variable across the tag.
         """
-        flux = dot(u, self.n)*self.mesh.ds(tag)
+        flux = dot(u, self.mesh.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
     
@@ -620,7 +616,7 @@ class DataHeat(DataGenerator):
         Returns:
         - total_flux: The total heat flux across the interface.
         """
-        flux = -self.solver.k * dot(grad(u)('+'), self.n('+')) * self.mesh.dS(interface)
+        flux = -self.solver.k * dot(grad(u)('+'), self.mesh.n('+')) * self.mesh.dS(interface)
         total_flux = assemble(flux)
         return total_flux
     
@@ -635,7 +631,7 @@ class DataHeat(DataGenerator):
         Returns:
         - total_flux: The total heat flux at the inlet boundary.
         """
-        flux = self.solver.k * dot(grad(u), self.n) * self.mesh.ds(tag)
+        flux = self.solver.k * dot(grad(u), self.mesh.n) * self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
 

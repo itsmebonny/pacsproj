@@ -41,7 +41,7 @@ class MeshCreator:
 
         # aggiungere se fare interfaccia random o no
 
-    def create_mesh(self, filename, output_dir, plot=False):
+    def create_mesh(self, filename, output_dir):
         """
         Create a mesh using Gmsh.
 
@@ -108,8 +108,8 @@ class MeshCreator:
 
             # Creates graphical user interface
             #if 'close' not in sys.argv:
-            if plot:
-                gmsh.fltk.run()
+            # if plot:
+            # gmsh.fltk.run()
 
             # It finalize the Gmsh API
             gmsh.finalize()
@@ -117,15 +117,12 @@ class MeshCreator:
 class MeshLoader:
 
     def __init__(self,filename):
-        # store the input mesh file name
         self.meshfile = filename
-
-        # load the mesh from xml file 
         self.mesh = Mesh(self.meshfile + ".xml")
-
-        # create a MeshFunction for boundaries and physical regions
         self.bounds = MeshFunction("size_t", self.mesh, self.meshfile + "_facet_region.xml")
         self.face = MeshFunction("size_t", self.mesh, self.meshfile + "_physical_region.xml")
+        self.n = FacetNormal(self.mesh)
+        self.h = self.mesh.hmin()
     
     
     def update_tags(self,tags):
@@ -161,7 +158,6 @@ class MeshLoader:
         self.dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)
 
         return self.dS, self.ds, self.dx
-    
 
 if __name__ == "__main__":
 
@@ -178,5 +174,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mesh_creator = MeshCreator(args)
+    mesh_creator.create_mesh( "Prova","data/mesh_test")
     
-    mesh_creator.create_mesh( "Prova","data/mesh_test", plot=False)
