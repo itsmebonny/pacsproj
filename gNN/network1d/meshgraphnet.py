@@ -318,20 +318,6 @@ class MeshGraphNet(EncodeProcessDecodeNetwork):
 
         return junction_continuity
 
-    # def estimate_bcs(self, g):
-    #     g.apply_nodes(self.encode_nodes_bcs)
-    #     g.apply_edges(self.encode_edges_bcs)
-
-    #     g.apply_edges(self.process_edges_bcs)
-    #     g.update_all(fn.copy_e('proc_edge_bcs', 'm'), 
-    #                  fn.sum('m', 'pe_sum_bcs'))
-
-    #     g.apply_nodes(self.process_nodes_bcs)
-
-    #     g.apply_nodes(self.decode_nodes_bcs)
-
-    #     return g.ndata['pred_labels_bcs']
-
     def forward(self, g):
         """
         Forward step

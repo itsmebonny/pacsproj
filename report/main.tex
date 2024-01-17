@@ -347,15 +347,30 @@ In this section we describe the functions defined in \texttt{generate\_graphs.py
 
 % qui dovremmo spiegare non come funziona la gnn teoricamente perché è già scritto sopra (e al massimo facciamo l'appendix) ma più che altro cosa fanno i vari file che ci sono (a grandi linee perché non l'abbiamo scritta noi) e tipo dire quali sono le parti che abbiamo modificato noi 
 
-The graph neural network used in this project is the one presented in \cite{Luca}, which is an adaptation of the MeshGraphNet implementation \cite{MeshGraphNet}, which we modified to make it suitable for our test case and extendable to other problems. The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features at that time step, and it predicts an update for the state variables. The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
+\subsubsection*{Code Structure}
+To better understand the behavior of the network, it is necessary to look at its inner mechanisms. 
+Starting from the \texttt{MLP} class, we can see that it is a simple multi-layer perceptron, with a number of hidden layers specified by the input parameter \texttt{n\_h\_layers}. This is the basic mechanism of all the network, every time that we want to process a node or an edge, we use an \texttt{MLP} to do so. 
+The \texttt{MLP} class has a constructor that takes as input the number of input features, the number of output features, the size of the latent space and the number of hidden layers and use those inputs to create the input and output layers and the hidden layers. The input and output layers are \texttt{Linear} layers, while the hidden layers are \texttt{Linear} layers followed by a \texttt{LeakyReLU} activation function. 
 
-A forward step of the GNN is composed by three stages:
-\begin{enumerate}
-    \item Encode: a latent representation of the node and edge features is computed thanks to a first fully connected neural network.
-    \item Process: the process stage is composed by \(L\) identical blocks, which update the node and edge features for \(L\) iterations. 
-    \item Decode: using a fully connected neural network, the node features are transformed from the latent space to the output space. The output of the GNN is a vector containing the update of the state variables \(\delta\Theta^n\) at each node of the graph.
-\end{enumerate}
+The \texttt{MLP} class also has a \texttt{forward} method that computes the forward step of the network. It takes as input the input tensor and returns the result of the forward step. This is what will be meant when talking about encoding or decoding, feeding those data to an \texttt{MLP}.
 
+
+The \texttt{EncodeProcessDecodeNetwork} class is the core of the network, it is the one that actually processes the graph. It is composed by three main parts: the encoder, the processor and the decoder. The encoder is composed by two \texttt{MLP}s, one for the nodes and one for the edges. The processor is made up by a number of \texttt{MLP}s equal to the number of iterations specified by the input parameter \texttt{process\_iterations}. The decoder is built using a single \texttt{MLP} that has the same number of neuron in its last layer as the output.
+
+The \texttt{EncodeProcessDecodeNetwork} class constructor takes as input a dictionary of hyperparameters and uses it to initialize the encoder, the processor and the decoder. 
+The \texttt{EncodeProcessDecodeNetwork} class also has five methods, one that encodes the edges (\texttt{encode\_edges}) and the other are for processing and decoding both edges and nodes (\texttt{process\_edges}, \texttt{process\_nodes}, \texttt{decode\_edges}, \texttt{decode\_nodes}). The attentive reader will surely notice that the method needed for encoding the nodes is missing, but this will become clear in the next paragraph.
+
+
+The \texttt{MeshGraphNet} class is a subclass of \texttt{EncodeProcessDecodeNetwork}, it is the one that actually computes the pressure and flowrate updates given the previous system state. Its built using the same constructor as its father class. 
+
+The method inside this class are the following:
+\begin{itemize}
+    \item \texttt{encode\_nodes}: this method takes as input the node features and returns the result of the encoding step. It is done inside this class to avoid losing generality in its parent class since nodes could have different features depending on the problem (e.g. \texttt{inlet\_mask} is quite specific to the fluid dynamics problem that this code originally solved).
+    \item \texttt{continuity\_loss}: this method is not used in this test case, since we do not have any junction nodes. It is used to compute loss at junction nodes and it is left there to future proof the code.
+    \item \texttt{forward}: this method is the one that actually computes the forward step of the network. It encodes both nodes and edges to the latent space, then perform a loop of processing iterations and finally decodes both nodes and edges to the output space. It returns the predicted update of the system state.
+\end{itemize}
+
+%mancano commenti su training.py
 
 %-----------------------------------------------------------------------------
 % Results
