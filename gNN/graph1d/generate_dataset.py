@@ -254,10 +254,10 @@ def split(graphs, divs, dataset_info):
 
     sublists = {}
     for name in names:
-        type = dataset_info[name]['model_type']
-        if type not in sublists:
-            sublists[type] = []
-        sublists[type].append(name)
+        type_ = dataset_info[name]['model_type']
+        if type_ not in sublists:
+            sublists[type_] = []
+        sublists[type_].append(name)
 
     subsets = {}
     for sublist_n, sublist_v in sublists.items():
@@ -288,9 +288,9 @@ def split(graphs, divs, dataset_info):
     datasets = []
 
     if divs == 1:
-        split_size = int(len(subsets['heat_eq'][0])*0.8)
-        datasets.append({'train': subsets['heat_eq'][0][:split_size],
-                         'test': subsets['heat_eq'][0][split_size:]})
+        split_size = int(len(subsets[type_][0])*0.8)
+        datasets.append({'train': subsets[type_][0][:split_size],
+                         'test': subsets[type_][0][split_size:]})
         return datasets
 
     for i in range(divs):

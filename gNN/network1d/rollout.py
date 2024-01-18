@@ -100,10 +100,10 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
     gf[:,0:params['nout']] = gf[:,0:params['nout']] + delta
 
     if set_bcs:
-        if params['bc_type'] == 'Heat':
+        if params['bc_type'] == 'heat':
             gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
             gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
-        if params['bc_type'] == 'Stokes':
+        if params['bc_type'] == 'stokes':
             gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
             gf[graph.ndata['outlet_mask'].bool(), 1] = bcs[graph.ndata['outlet_mask'].bool(), 1, time_index]
 
@@ -223,7 +223,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
     errs = th.sum(th.sum(diff**2, dim = 0), dim = 1)
     errs = errs / th.sum(th.sum(tfc**2, dim = 0), dim = 1)
     errs = th.sqrt(errs)
-    return rfc.detach().numpy(), errs_normalized.detach().numpy(), \
+    return r_features.detach().numpy(), errs_normalized.detach().numpy(), \
            errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start, 
 
     

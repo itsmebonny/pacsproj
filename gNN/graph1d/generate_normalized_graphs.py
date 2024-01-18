@@ -244,7 +244,7 @@ def normalize_graphs(graphs, fields, statistics, norm_dict_label):
                                                             statistics,
                                                             norm_dict_label)
 
-def add_features(graphs, nodes_features = None, edges_features = None):
+def add_features(graphs, target_features=None, nodes_features = None, edges_features = None):
     """
     Add features to graphs.
 
@@ -285,22 +285,24 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         #             nodes_features, 
         #             'dt')
         # print(cf)
-                
-        if 'pressure' in nodes_features:
-            add_feature(graph.ndata['pressure'].clone(), nodes_features, 'pressure')
-        add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
-                    nodes_features, 
-                    'interface_length')
-        add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
-                    nodes_features, 
-                    'k')
+        
+        for label in target_features:
+                add_feature(graph.ndata[label].clone(), target_features, label)
+        for label in nodes_features:
+            add_feature(graph.ndata[label].repeat(1,1,ntimes),nodes_features,label)
+        # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
+        #             nodes_features, 
+        #             'interface_length')
+        # add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
+        #             nodes_features, 
+        #             'k')
     
         #print('flux',graph.ndata['flux'])
         # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
         #             nodes_features, 
         #             'interface_length')
         
-        f = graph.ndata['flux'].clone()
+        # f = graph.ndata['flux'].clone()
         
         # add_feature(th.ones(f.shape[0],1,ntimes) * th.min(f), 
         #             nodes_features, 
@@ -326,19 +328,20 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         # add_feature(r2, nodes_features, 'resistance2')
 
         cfeatures = th.cat(cf, axis = 1)
+        graph.ndata['nfeatures'] = cfeatures
 
-        if 'loading' in nodes_features:
-            loading = graph.ndata['loading']
-            graph.ndata['nfeatures'] = th.cat((f, cfeatures, loading), 
-                                               axis = 1)
-        else:
-            graph.ndata['nfeatures'] = th.cat((f, cfeatures), axis = 1)
+        # if 'loading' in nodes_features:
+        #     loading = graph.ndata['loading']
+        #     graph.ndata['nfeatures'] = th.cat((f, cfeatures, loading), 
+        #                                        axis = 1)
+        # else:
+        #     graph.ndata['nfeatures'] = th.cat((f, cfeatures), axis = 1)
 
         cf = []
         add_feature(graph.edata['area'], edges_features, 'area')
         add_feature(graph.edata['length'], edges_features, 'length')
         graph.edata['efeatures'] = th.cat(cf, axis = 1)
-def add_deltas(graphs):
+def add_deltas(graphs,target_features):
     """
     Compute pressure and flowrate increments.
 
@@ -352,12 +355,11 @@ def add_deltas(graphs):
     for graph_n in tqdm(graphs, desc = 'Add deltas', colour='green'):
         graph = graphs[graph_n]
 
-        if 'pressure' in graph.ndata:
-            graph.ndata['dp'] = graph.ndata['pressure'][:,:,1:] - \
-                                graph.ndata['pressure'][:,:,:-1]
+        for label in target_features:
 
-        graph.ndata['df'] = graph.ndata['flux'][:,:,1:] - \
-                            graph.ndata['flux'][:,:,:-1]
+            graph.ndata['d' + label] = graph.ndata[label][:,:,1:] - \
+                                    graph.ndata[label][:,:,:-1]
+
 
 def save_graphs(graphs, output_dir):
     """
@@ -469,16 +471,18 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
 
     
     normalize_graphs(graphs, fields_to_normalize, statistics, 'features')
-    add_deltas(graphs)
-    if docompute_statistics:
-        compute_statistics(graphs, {'node' : ['df']}, statistics)
-    normalize_graphs(graphs, {'node' : ['df']}, statistics, 'labels')
+    add_deltas(graphs,features['target_features'])
+    for label in features['target_features']:
+        if docompute_statistics:
+            compute_statistics(graphs, {'node' : ['d'+label]}, statistics)
+        normalize_graphs(graphs, {'node' : ['d'+label]}, statistics, 'labels')
     params = {'bc_type': bc_type}
     params['statistics'] = statistics
     if features == None:
         add_features(graphs)
     else:
         add_features(graphs, 
+                     features['target_features'],
                      features['nodes_features'], 
                      features['edges_features'])
 

@@ -15,3 +15,4 @@ latex
 report/main.pdf
 Doxyfile.bak
 models
+gNN/tools/data_location.txt

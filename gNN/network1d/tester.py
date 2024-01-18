@@ -103,8 +103,8 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
             r_features, errs_normalized, \
             errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
             plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
-            dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], 
-                                                                                       'flux', params['statistics'], 'features')
+            # dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], 
+            #                                                                            'flux', params['statistics'], 'features')
             plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
             plt.show()
         print(errs_normalized)
@@ -148,16 +148,25 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm',
     if data_location == None:
         data_location = io.data_location()
         print(data_location)
+    target_features = ['flux']
+    nodes_features = [
+            'k',
+            'interface_length']
+
+    edges_features = ['area', 'length']
+    features = {'nodes_features': nodes_features, 
+                'edges_features': edges_features,
+                'target_features': target_features}
     graphs, _  = gng.generate_normalized_graphs(data_location + graphs_folder,
                                                 params['statistics']
                                                       ['normalization_type'],
                                                 params['bc_type'],
                                                 statistics = params 
-                                                             ['statistics'])
+                                                             ['statistics'],features=features)
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm2/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 

@@ -73,6 +73,8 @@ class SignalHandler(object):
                         "Model and statistics will be saved (y/n)")
         if res == "y":
             self.should_exit = True
+            # exit without saving
+            sys.exit()
         else:
             pass
 
@@ -536,8 +538,8 @@ def parse_command_line_arguments():
     parser.add_argument('--stride', help='stride for multistep training',
                         type=int, default=5
                         )
-    parser.add_argument('--bcs_gnn', help='path to graph for bcs',
-                        type=str, default='models_bcs/31.10.2022_01.35.31')
+    # parser.add_argument('--bcs_gnn', help='path to graph for bcs',
+    #                     type=str, default='models_bcs/31.10.2022_01.35.31')
     parser.add_argument('--nout', help='number of output',
                         type=int, default=1)
     args = parser.parse_args()
@@ -555,7 +557,7 @@ def parse_command_line_arguments():
                 'rate_noise': args.rate_noise,
                 'rate_noise_features': args.rate_noise_features,
                 'stride': args.stride,
-                'bcs_gnn': args.bcs_gnn,
+                # 'bcs_gnn': args.bcs_gnn,
                 'nout': args.nout
                 }
 
@@ -563,7 +565,7 @@ def parse_command_line_arguments():
 
 def get_graphs_params(label_normalization, types_to_keep, 
                       n_graphs_to_keep = -1,
-                      graphs_folder = 'graphs_rm/',
+                      graphs_folder = 'graphs_stokes/',
                       data_location = io.data_location(),
                       features = None):
     """
@@ -592,7 +594,7 @@ def get_graphs_params(label_normalization, types_to_keep,
     t2k = types_to_keep
     ngtk = n_graphs_to_keep
     graphs, params  = gng.generate_normalized_graphs(input_dir, norm_type, 
-                                                    'physiological',
+                                                    'heat',
                                                     {'dataset_info' : info,
                                                     'types_to_keep': t2k},
                                                     n_graphs_to_keep=ngtk,
@@ -683,17 +685,18 @@ if __name__ == "__main__":
 
     # 'synthetic' refers to the bcs, not the geometry
     types_to_keep = []
+    target_features = ['flux','pressure']
     nodes_features = [
-            'flux', 
             'k',
             'interface_length']
 
     edges_features = ['area', 'length']
 
     features = {'nodes_features': nodes_features, 
-                'edges_features': edges_features}
+                'edges_features': edges_features,
+                'target_features': target_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs_rm/', 
+             graphs_folder = 'graphs_stokes/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()
