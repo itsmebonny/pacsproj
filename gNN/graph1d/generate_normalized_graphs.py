@@ -285,6 +285,9 @@ def add_features(graphs, nodes_features = None, edges_features = None):
         #             nodes_features, 
         #             'dt')
         # print(cf)
+                
+        if 'pressure' in nodes_features:
+            add_feature(graph.ndata['pressure'].clone(), nodes_features, 'pressure')
         add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
                     nodes_features, 
                     'interface_length')
@@ -349,8 +352,9 @@ def add_deltas(graphs):
     for graph_n in tqdm(graphs, desc = 'Add deltas', colour='green'):
         graph = graphs[graph_n]
 
-        # graph.ndata['dp'] = graph.ndata['flux'][:,:,1:] - \
-        #                     graph.ndata['flux'][:,:,:-1]
+        if 'pressure' in graph.ndata:
+            graph.ndata['dp'] = graph.ndata['pressure'][:,:,1:] - \
+                                graph.ndata['pressure'][:,:,:-1]
 
         graph.ndata['df'] = graph.ndata['flux'][:,:,1:] - \
                             graph.ndata['flux'][:,:,:-1]

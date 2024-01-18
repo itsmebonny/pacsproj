@@ -97,13 +97,14 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     N = len(dataset.graphs)
     graph_n = np.random.uniform(0,N, 1).astype(int)[0]
     if doplot:
-        for i in range(10):
+        for i in range(5):
             node = i
             print(dataset.graphs[graph_n].ndata['k'])
             r_features, errs_normalized, \
             errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
             plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
-            
+            dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], 
+                                                                                       'flux', params['statistics'], 'features')
             plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
             plt.show()
         print(errs_normalized)
@@ -156,7 +157,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_long/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm2/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 

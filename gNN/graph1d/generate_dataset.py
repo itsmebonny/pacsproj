@@ -147,21 +147,20 @@ class Dataset(DGLDataset):
         features = self.graphs[igraph].ndata['nfeatures'].clone()
         #print(features)
         nf = features[:,:,itime].clone()
-        nfsize = nf[:,:1].shape
+        nfsize = nf[:,:self.params['nout']].shape
         dt = self.graphs[igraph].ndata['dt'][0]
         curnoise = np.random.normal(0, self.params['rate_noise'] * dt, nfsize)
-        nf[:,:1] = nf[:,:1] + curnoise
+        nf[:,:self.params['nout']] = nf[:,:self.params['nout']] + curnoise
 
         fnoise = np.random.normal(0, self.params['rate_noise_features'],
-                                  nf[:,1:].shape)
+                                  nf[:,self.params['nout']:].shape)
         # flowrate at inlet is exact
         fnoise[self.graphs[igraph].ndata['inlet_mask'].bool(),0] = 0
-        nf[:,1:] = nf[:,1:] + fnoise
+        nf[:,self.params['nout']:] = nf[:,self.params['nout']:] + fnoise
 
         self.lightgraphs[igraph].ndata['nfeatures'] = nf
 
-        ns = features[:,0:1,itime + 1:itime + 1 + self.params['stride']].clone()
-        # ho messo 0:1 per avere solo flux
+        ns = features[:,0:self.params['nout'],itime + 1:itime + 1 + self.params['stride']].clone()
 
         self.lightgraphs[igraph].ndata['next_steps'] = ns
 
@@ -169,8 +168,8 @@ class Dataset(DGLDataset):
 
         # add regular noise to the edge features to prevent overfitting
         fnoise = np.random.normal(0, self.params['rate_noise_features'],
-                                  ef[:,1:].shape)
-        ef[:,1:] = ef[:,1:] + fnoise
+                                  ef[:,:].shape)
+        ef[:,:] = ef[:,:] + fnoise
         self.lightgraphs[igraph].edata['efeatures'] = ef.squeeze()
 
         return self.lightgraphs[igraph]

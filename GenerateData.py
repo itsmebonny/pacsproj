@@ -29,7 +29,7 @@ class Solver(ABC):
 
 class Stokes(Solver):
 
-    def __init__(self, mesh, V, Q, rho, mu, U0, L0, inflow, f, dt, T, doplot=False):
+    def __init__(self, mesh, V, Q, rho, mu, U0, L0, inflow, f, dt, T, k, doplot=False):
         """
         Initialize the GenerateData class.
 
@@ -58,6 +58,7 @@ class Stokes(Solver):
         self.f = f
         self.dt = dt
         self.T = T
+        self.k = k
         self.doplot = doplot
 
 
@@ -120,8 +121,8 @@ class Stokes(Solver):
         u0 = Function(P)
         p0 = Function(Z)
 
-        self.k = self.rho * self.U0 * self.L0 / self.mu
-        self.k = round(self.k,2)
+        # self.k = self.rho * self.U0 * self.L0 / self.mu
+        # self.k = round(self.k,2)
         a = (1/self.dt)*inner(u,v)*dx + (1/self.k)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx
         L = inner(f,v)*dx + (1/self.dt)*inner(u0,v)*dx
 
@@ -405,20 +406,15 @@ class DataGenerator(ABC):
         tags_list = ['inlet','interface','outlet']
         it=0
         for j in tags_list:
-            #print(j)
             for i in self.mesh.tags[j]:
-                #print(i)
                 edge_coord =[]
                 # Extract the coordinates of the vertices for each edge with the specified tag
                 for edge in edges(self.mesh.mesh):
                     if self.mesh.bounds.array()[edge.index()] == i:
                         for vertex in vertices(edge):
                            coordinate = vertex.point().array()
-                           #print('coordinate: ', coordinate)
                            edge_coord.append(coordinate)
-                #print('test1: ', edge_coord)
                 edge_coord = np.stack(edge_coord, axis=0)
-                #print('test2: ', edge_coord)
                 # Calculate the midpoint of the edge and append to the centerline list
                 center_line[it] = (np.max(edge_coord[:,0])+np.min(edge_coord[:,0]))/2,(np.max(edge_coord[:,1])+np.min(edge_coord[:,1]))/2
                 it+=1
@@ -448,7 +444,6 @@ class DataGenerator(ABC):
         if not hasattr(self, 'EdgesData'):
             self.edges_data()
         self.graph = gg.generate_graph(self.NodesData, self.center_line, self.EdgesData, self.edges1, self.edges2)
-        print(fields_names)
         for i,key in enumerate(fields_names):
             gg.add_field(self.graph, self.TDNodesData[i], key)
         gg.save_graph(self.graph, f"k_{self.solver.k}", output_dir)
@@ -577,7 +572,7 @@ class DataNS(DataGenerator):
         self.TDNodesData = [td_dict_u, td_dict_p]
         return td_dict_u, td_dict_p
 
-    def save_graph(self,fields_names=['flow_rate','pressure'], output_dir = "data/graphs/"):
+    def save_graph(self,fields_names=['flux','pressure'], output_dir = "data/graphs/"):
         """
         Saves the graphs of specified fields.
 

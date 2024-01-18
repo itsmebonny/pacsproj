@@ -97,19 +97,26 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
     # print('bcs', bcs)
     delta = gnn_model(graph)
     # print('delta:', delta)
-    gf[:,0:1] = gf[:,0:1] + delta
+    gf[:,0:params['nout']] = gf[:,0:params['nout']] + delta
 
     if set_bcs:
-        if 'dirichlet' in params['bc_type']:
-            set_boundary_conditions_dirichlet(gf, graph, params, bcs,
-                                              time_index)
-        elif params['bc_type'] == 'physiological':
-            #print(bcs.shape)
+        if params['bc_type'] == 'Heat':
             gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
             gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
+        if params['bc_type'] == 'Stokes':
+            gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
+            gf[graph.ndata['outlet_mask'].bool(), 1] = bcs[graph.ndata['outlet_mask'].bool(), 1, time_index]
+
+        # if 'dirichlet' in params['bc_type']:
+        #     set_boundary_conditions_dirichlet(gf, graph, params, bcs,
+        #                                       time_index)
+        # elif params['bc_type'] == 'Neumann':
+        #     #print(bcs.shape)
+        #     gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
+        #     gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
             #gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
             #print(gf[graph.ndata['inlet_mask'].bool(), 1],bcs[graph.ndata['inlet_mask'].bool(), 0, time_index] )
-    return gf[:,0:1]
+    return gf[:,0:params['nout']]
 
 def compute_average_branches(graph, flowrate):
     """
@@ -157,7 +164,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
     graph.edata['efeatures'] = true_graph.edata['efeatures'].squeeze().clone()
    
 
-    r_features = graph.ndata['nfeatures'][:,0:1].unsqueeze(axis = 2).clone()
+    r_features = graph.ndata['nfeatures'][:,0:params['nout']].unsqueeze(axis = 2).clone()
     #print('tfc', tfc)
     start = time.time()
     for it in range(times-1):
@@ -171,14 +178,14 @@ def rollout(gnn_model, params, graph, average_branches = False):
         if average_branches:
             compute_average_branches(graph, gf[:,1])
 
-        graph.ndata['nfeatures'][:,0:1] = gf
+        graph.ndata['nfeatures'][:,0:params['nout']] = gf
         r_features = th.cat((r_features, gf.unsqueeze(axis = 2)), axis = 2)
 
         # set next conditions to exact for debug
         # graph.ndata['nfeatures'][:,0:1] = tfc[:,0:1,it + 1].clone()
 
     end = time.time()
-    tfc = true_graph.ndata['nfeatures'][:,0:1,:].clone()
+    tfc = true_graph.ndata['nfeatures'][:,0:params['nout'],:].clone()
 
     rfc = r_features.clone()
 
@@ -204,6 +211,11 @@ def rollout(gnn_model, params, graph, average_branches = False):
 
     rfc[:,0,:] = nz.invert_normalize(rfc[:,0,:], 'flux', 
                                      params['statistics'], 'features')
+    if params['nout'] == 2:
+        tfc[:,1,:] = nz.invert_normalize(tfc[:,1,:], 'pressure', 
+                                     params['statistics'], 'features')
+        rfc[:,1,:] = nz.invert_normalize(rfc[:,1,:], 'pressure', 
+                                         params['statistics'], 'features')
     # rfc[:,1,:] = nz.invert_normalize(rfc[:,1,:], 'dt', 
     #                                  params['statistics'], 'features')
 
@@ -211,8 +223,8 @@ def rollout(gnn_model, params, graph, average_branches = False):
     errs = th.sum(th.sum(diff**2, dim = 0), dim = 1)
     errs = errs / th.sum(th.sum(tfc**2, dim = 0), dim = 1)
     errs = th.sqrt(errs)
-    return r_features.detach().numpy(), errs_normalized.detach().numpy(), \
-           errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start
+    return rfc.detach().numpy(), errs_normalized.detach().numpy(), \
+           errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start, 
 
     
 

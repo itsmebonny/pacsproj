@@ -193,7 +193,7 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
                                       istride)
 
 
-                batched_graph_c.ndata['nfeatures'][:,0:1] = nf
+                batched_graph_c.ndata['nfeatures'][:,0:params['nout']] = nf
                 
                 # print(istride)
                 # print(nf)
@@ -538,6 +538,8 @@ def parse_command_line_arguments():
                         )
     parser.add_argument('--bcs_gnn', help='path to graph for bcs',
                         type=str, default='models_bcs/31.10.2022_01.35.31')
+    parser.add_argument('--nout', help='number of output',
+                        type=int, default=1)
     args = parser.parse_args()
 
     # we create a dictionary with all the parameters
@@ -553,13 +555,15 @@ def parse_command_line_arguments():
                 'rate_noise': args.rate_noise,
                 'rate_noise_features': args.rate_noise_features,
                 'stride': args.stride,
-                'bcs_gnn': args.bcs_gnn}
+                'bcs_gnn': args.bcs_gnn,
+                'nout': args.nout
+                }
 
     return t_params, args
 
 def get_graphs_params(label_normalization, types_to_keep, 
                       n_graphs_to_keep = -1,
-                      graphs_folder = 'graphs_long/',
+                      graphs_folder = 'graphs_rm/',
                       data_location = io.data_location(),
                       features = None):
     """
@@ -596,7 +600,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_long/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -632,7 +636,7 @@ def training(parallel, rank = 0, graphs_folder = 'graphs_long/',
 
     infeat_nodes = graph.ndata['nfeatures'].shape[1] + 1
     infeat_edges = graph.edata['efeatures'].shape[1]
-    nout = 1
+    nout = args.nout
 
     t_params['infeat_nodes'] = infeat_nodes
     t_params['infeat_edges'] = infeat_edges
@@ -689,7 +693,7 @@ if __name__ == "__main__":
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs_long/', 
+             graphs_folder = 'graphs_rm/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()
