@@ -34,7 +34,6 @@ for it in range(args.nmesh):
         points += [gmsh.model.geo.addPoint(w + wold, h, 0, lc)]
         wold += w
     # Define the rectangle coordinates
-    print(points)
 
     # Add the rectangle to the model
     list_lines_x=[]
@@ -73,7 +72,7 @@ for it in range(args.nmesh):
 
     # Creates graphical user interface
     #if 'close' not in sys.argv:
-    gmsh.fltk.run()
+    #gmsh.fltk.run()
 
     # It finalize the Gmsh API
     gmsh.finalize()

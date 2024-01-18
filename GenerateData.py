@@ -405,20 +405,20 @@ class DataGenerator(ABC):
         tags_list = ['inlet','interface','outlet']
         it=0
         for j in tags_list:
-            print(j)
+            #print(j)
             for i in self.mesh.tags[j]:
-                print(i)
+                #print(i)
                 edge_coord =[]
                 # Extract the coordinates of the vertices for each edge with the specified tag
                 for edge in edges(self.mesh.mesh):
                     if self.mesh.bounds.array()[edge.index()] == i:
                         for vertex in vertices(edge):
                            coordinate = vertex.point().array()
-                           print('coordinate: ', coordinate)
+                           #print('coordinate: ', coordinate)
                            edge_coord.append(coordinate)
-                print('test1: ', edge_coord)
+                #print('test1: ', edge_coord)
                 edge_coord = np.stack(edge_coord, axis=0)
-                print('test2: ', edge_coord)
+                #print('test2: ', edge_coord)
                 # Calculate the midpoint of the edge and append to the centerline list
                 center_line[it] = (np.max(edge_coord[:,0])+np.min(edge_coord[:,0]))/2,(np.max(edge_coord[:,1])+np.min(edge_coord[:,1]))/2
                 it+=1
