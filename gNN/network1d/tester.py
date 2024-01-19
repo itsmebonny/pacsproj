@@ -119,8 +119,8 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N, \
            total_time / N, total_timesteps / N
 
-def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm', 
-                       data_location = '/data/graphs_rm'):
+def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm/', 
+                       data_location = 'data/'):
 
     """
     Get GNN and list of graphs given the path to a saved model folder.
@@ -157,16 +157,34 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm',
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features,
                 'target_features': target_features}
-    graphs, _  = gng.generate_normalized_graphs(data_location + graphs_folder,
-                                                params['statistics']
-                                                      ['normalization_type'],
-                                                params['bc_type'],
-                                                statistics = params 
-                                                             ['statistics'],features=features)
-
+    # graphs, _  = gng.generate_normalized_graphs(data_location + graphs_folder,
+    #                                             params['statistics']
+    #                                                   ['normalization_type'],
+    #                                             params['bc_type'],
+    #                                             statistics = params 
+    #                                                          ['statistics'],features=features)
+    info = json.load(open(data_location + graphs_folder + 'dataset_info.json'))
+    graphs, params2  = gng.generate_normalized_graphs(data_location + graphs_folder,
+                                                {'features': 'normal', 'labels': 'normal'},
+                                                'heat',
+                                                {'dataset_info' : info,
+                                                    'types_to_keep': []},features=features)
+    graph_n = 'k_35.36.grph'
+    
+    params2['nout'] = params['nout']
+    
+    r_features, errs_normalized, \
+            errs, diff, elaps = rollout(gnn_model, params2, graphs[graph_n])
+    node = 1
+    plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
+    # dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], 
+    #                                                                            'flux', params['statistics'], 'features')
+    plt.plot(graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
+    plt.show()
+    
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_new/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 
@@ -189,8 +207,10 @@ def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'dat
                                                    graphs_folder,
                                                    data_location)
 
-    dataset = dset.generate_dataset_from_params(graphs, params)
+    # dataset = dset.generate_dataset_from_params(graphs, params)
     return dataset, gnn_model, params
+
+
 
 """
 This function expects the location of a saved model folder as command line
@@ -200,10 +220,11 @@ argument. This is typically located in 'models/' after launching
 if __name__ == '__main__':
     path = sys.argv[1]
 
-    dataset, gnn_model, params = get_dataset_and_gnn(path)
+    # dataset, gnn_model, params = get_dataset_and_gnn(path)
 
     if os.path.exists('results'):
         shutil.rmtree('results')
 
-    evaluate_all_models(dataset, 'train', gnn_model, params, True)
-    evaluate_all_models(dataset, 'test', gnn_model, params, True)
+    get_gnn_and_graphs(path)
+        # evaluate_all_models(dataset, 'new', gnn_model, params, True)
+    # evaluate_all_models(dataset, 'test', gnn_model, params, True)
