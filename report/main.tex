@@ -160,7 +160,21 @@ A forward step of the GNN is composed by three stages:
 \end{enumerate}
 After this forward step, the state variables can be updated as \(\Theta^{n+1} = \Theta^{n} + \delta\Theta^{n}\).
 
-% qui dovremmo spiegare la loss che si usa e anche tutti gli altri parametri che si possono modificare che ho messo nella tabella sotto
+We consider our dataset composed of \(G\) graphs, each of them consisting of a set of nodes \(n_1^g,...,n_{N^g}^g\), and we define as \(M^g\) the final time step of the \(g\)-th graph.
+The neural network is trained on small strides \(s\) of consecutive timesteps since it has been proven to improve the accuracy of the predictions \cite{Luca}.
+The loss function minimized during the training is defines as:
+\begin{equation}
+    \mathcal{L} = \sum_{g \in \mathcal{T}} \frac{1}{|\mathcal{T}|(M^g-s)} \sum_{n=0}^{M^g-s} sMSE^{n,g,s},
+\end{equation}
+where \(\mathcal{T}\) is the set of graphs used for training and \(sMSE\) is the strided mean squared error between the prediction and the ground truth:
+\begin{equation}
+    sMSE^{n,g,s} = \frac{1}{N^g} \sum_{l=1}^{s} \sum_{i=1}^{N^g} a_l (\hat{\Theta}^{k+l,g} - \Phi_l(\Theta^{k,g}|_i))^2.
+    \label{mse}
+\end{equation}
+In the above equation, \(a_l=1\) if \(l=1\) and \(a_l=0.5\) otherwise, \(\hat{\Theta}^{k+l,g}\) is the exact value of the nodal state variable at time step \(k+l\) of the \(g\)-th graph, and \(\Phi_l(\Theta^{k,g}|_i)\) is the approximation of \(\Theta\) at node \(i\) after \(l\) application of the GNN. 
+The loss function is optimized using the Adam optimizer.
+
+During the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise.
 
 \subsection{Test case: heat equation}
 
@@ -183,7 +197,7 @@ From these solutions we generated a dataset of 277 graphs.
 Each graph has 5 nodes: an inlet node, an outlet node and 3 nodes in correspondence of the interfaces. 
 As descriptor of the state of the system we consider the heat flux at each time step, which is computed as the integral of the normal derivative of the temperature on the interface. The other node features are the thermal diffusivity \(k\), the interface length and the nodal type (inlet, outlet or branch node). 
 As edge features we consider the area of the corresponding trapezoid and the distance between the nodes connected by the edge. 
-The graph neural newtork is trained for 100 epochs on this dataset, a list of the hyperparameters used is shown in Table \ref{hyperparams}.
+The graph neural newtork is trained for 100 epochs on this dataset, a list of the hyperparameters used is shown in Table \ref{hyperparams}. To more details about the hyperparameters and the network architecture we refer to Section \ref{gnn}.
 
 \begin{table}[H]
     \centering
@@ -344,6 +358,7 @@ In this section we describe the functions defined in \texttt{generate\_graphs.py
 \end{itemize}
 
 \subsection{Graph Neural Network}
+\label{gnn}
 
 % qui dovremmo spiegare non come funziona la gnn teoricamente perché è già scritto sopra (e al massimo facciamo l'appendix) ma più che altro cosa fanno i vari file che ci sono (a grandi linee perché non l'abbiamo scritta noi) e tipo dire quali sono le parti che abbiamo modificato noi 
 
