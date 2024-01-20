@@ -515,7 +515,7 @@ def parse_command_line_arguments():
 
     parser.add_argument('--bs', help='batch size', type=int, default=32)
     parser.add_argument('--epochs', help='total number of epochs', type=int,
-                        default=10000)
+                        default=100)
     parser.add_argument('--lr_decay', help='learning rate decay', type=float,
                         default=0.001)
     parser.add_argument('--lr', help='learning rate', type=float, default=0.01)
@@ -526,7 +526,7 @@ def parse_command_line_arguments():
     parser.add_argument('--weight_decay', help='l2 regularization', 
                         type=float, default=1e-5)
     parser.add_argument('--ls_gnn', help='latent size gnn', type=int,
-                        default=8)
+                        default=16)
     parser.add_argument('--ls_mlp', help='latent size mlps', type=int,
                         default=16)
     parser.add_argument('--process_iterations', help='gnn layers', type=int,
@@ -602,7 +602,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_training/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -685,18 +685,14 @@ if __name__ == "__main__":
 
     # 'synthetic' refers to the bcs, not the geometry
     types_to_keep = []
-    target_features = ['flux','pressure']
-    nodes_features = [
-            'k',
-            'interface_length']
-
+    target_features = ['flux']
+    nodes_features = ['k','interface_length']
     edges_features = ['area', 'length']
-
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features,
                 'target_features': target_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs_stokes/', 
+             graphs_folder = 'graphs_training/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()
