@@ -177,6 +177,7 @@ The loss function is optimized using the Adam optimizer.
 During the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise.
 
 \subsection{Test case: heat equation}
+\label{testcase}
 
 In this work, we consider the heat equation as test case. 
 The mathematical formulation of the problem is the following:
@@ -419,23 +420,48 @@ bcs\_gnn & Boundary conditions of the GNN \\
 With all the hyperparameters set, we can start the training process. Since this part of the code was only modified by us, we will not go into much detail, but we will only describe the main steps. The training starts by taking a dataset composed of \texttt{DGL} graphs, which are split into a train set and a test set. Then are defined a loss (MSE) and a metric (MAE). The dataset is created in such a way that to train the network on all the graphs a map is needed so that when a single time-step is evaluated, the network is able to map that single time-step to the correct graph. The time-step is performed using the function \texttt{perform\_timestep} from the \texttt{rollout.py} file. This function takes as input the model, the graph and the previous time-step and predict the value of the quantity of interest at the next step in time. This function is used also when evaluating the model since when we use it while training we compute the loss between the model's prediction and the ground truth, updating the weights of the network accordingly, while when we compute the rollout errors we use the model in inference mode and then compute the error between the prediction and the ground truth.
 
 TODO: spiegare cosa abbiamo modificato nel codice originale (generalizzato a qualsiasi numero di output) 
+
+\subsection*{Tester}
+The \texttt{tester.py} file is used to test the trained model on graphs from the training and test set and on new graphs. The file is composed of the following already implemented functions: 
+\begin{itemize}
+    \item \texttt{get\_dataset\_and\_gnn}: loads the dataset and the trained GNN given a path to a saved model folder
+    \item \texttt{get\_gnn\_and\_graphs}: loads th trained GNN and the graphs given a path to a saved model folder
+    \item \texttt{evaluate\_all\_method}: computes the rollout phase for all the graphs in the dataset ('train' or 'test' is specified by the user), given a trained model. 
+\end{itemize}
+
+In this file, we implemented two additional functions:
+\begin{itemize}
+    \item \texttt{plot\_predictions(dataset, split\_name, gnn\_model, params, graph\_idx=-1)}: it computes the rollout phase for a single graph and plots the model's predictions and the real data given a trained model and the dataset on which it was trained. It takes as input the dataset, the name of the split ('train' or 'test'), the trained model, the parameters of the model and the index of the graph to plot. If the index is not specified, the graph is randomly chosen. The function returns the nomalized error between the model's predictions and the real data.
+    \item \texttt{evaluate\_new\_graph(path, graph\_name, graphs\_folder, data\_location)}: it computes the rollout phase and it plots the model's predictions and the real data for a new graph given a trained model. It takes as input the path to the model folder, the name of the graph to evaluate, the folder where the graph is stored and the path to the folder where the data are stored. As above, the function returns the normalized error of the rollout phase. Inside this method, the function \texttt{generate\_normalized\_graph} is called since we need to store the new graph features in order to evaluate the model.
+\end{itemize}
+
+\section{Running istructions}
+
+
 %-----------------------------------------------------------------------------
 % Results
 %--- --------------------------------------------------------------------------
 
 \section{Results}
 
-TODO: vari plot delle prediction e delle loss nel caso heat equation
+In this section we show the results on the test case described in the section \ref{testcase}. 
+In Figure \ref{  } 
+
+
+
+As we can see from Figure \ref{}, the model is able to predict the heat flux at the interfaces with good accuracy when we test it on graphs from the training and the test set. 
 
 %-----------------------------------------------------------------------------
 % Further work
 %-----------------------------------------------------------------------------
 
-% prima di questo potremmo fare una section sulle istruzioni per runnare un test case se capiamo come farlo
 
-\section{Further work}
+\section{Further work and possible extensions}
+In this work, we focused on a simple test case to show the potential of this approach, but it can be easily extended. First of all, in the dataset generation the variability of the datatset can be increased simply by changing the parameters of the mesh creation (for example considering not equally spaced interfaces or a higher number of interfaces) and also by changing other parameters of the problem in addition to the diffusivity constant (such as the inlet condition). 
+The only limitation of this point is that the code needs a dictionary containing the tags of the boundaries of the meshes specified by the user and it is not able to automatically recognize them. 
 
-TODO: qui spieghiamo cosa si dovrebbe modificare per usare Stokes e in generale per usarla per altri problemi e cosa potremmo migliorare. 
+Another important extension is the possibility to consider different problems, such as the Stokes equation that we already implemented. In our code, to train the graph neural network on the Stokes equation, it is necessary to modify the \texttt{main} function of the \texttt{training.py} file changing the target features to 'flowrate' and 'pressure', and also to modify the number of outputs of the network, which is a command-line argument. It is also required to modify the boundary conditions type in 'Stokes', which is as well a command-line argument.
+Analogously, the code can be extended to other problems, impleting a corresponding \texttt{Solver} class and a corresponding \texttt{DataGenerator} class, inherited from the parent classes, and modifying the \texttt{main} function of the \texttt{training.py} file with the proper target, nodes and edges features. In this case, it may be necessary to change how the boundary conditions are imposed accordingly to the problem considered (it can be done in the \texttt{perform\_timestep} function of the \texttt{rollout.py} file). 
 
 %---------------------------------------------------------------------------
 %  BIBLIOGRAPHY

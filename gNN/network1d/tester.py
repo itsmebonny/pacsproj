@@ -34,21 +34,6 @@ from network1d.rollout import rollout
 import tools.plot_tools as pt
 import matplotlib.pyplot as plt
 
-def plot_rollout(features, graph, params, folder):
-    """
-    Saves videos with all nodal values for pressure and flow rate, for all
-    timesteps
-
-    Arguments:
-        features: 3D array containing the GNN prediction. 
-                  1 dim: graph nodes, 2 dim: pressure (0), florate (1),
-                  3 dim: timestep index
-        params: dictionary of parameters
-        folder (string): path where the video should be saved
-        file_name: name of output file. Default -> 'all_nodes.mp4'
-
-    """
-    
 
 def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     """
@@ -70,45 +55,32 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
 
     """
     print('==========' + split_name + '==========')
+    
     dataset = dataset[split_name]
     if doplot:
         pathlib.Path('results/' + split_name).mkdir(parents=True, exist_ok=True)
 
+    N = len(dataset.graphs)
     total_timesteps = 0
     total_time = 0
     tot_errs_normalized = 0
     tot_errs = 0
     tot_cont_loss = 0
-    # for i in range(0,len(dataset.graphs)):
-    #     print('model name = {}'.format(dataset.graph_names[i]))
-    #     fdr = 'results/' + split_name + '/' + dataset.graph_names[i] + '/'
-    #     pathlib.Path(fdr).mkdir(parents=True, exist_ok=True)
-    #     r_features, errs_normalized, \
-    #     errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[i])
-    #     total_time = total_time + elaps
-    #     total_timesteps = total_timesteps + r_features.shape[2]
-    #     print('Errors')
-    #     print(errs)
-    #     #if doplot:
-    #         #plot_rollout(r_features, dataset.graphs[i], params, fdr)ù
-    #     tot_errs_normalized = tot_errs_normalized + errs_normalized
-    #     tot_errs = tot_errs + errs
+    for i in range(0,len(dataset.graphs)):
+        print('model name = {}'.format(dataset.graph_names[i]))
+        fdr = 'results/' + split_name + '/' + dataset.graph_names[i] + '/'
+        pathlib.Path(fdr).mkdir(parents=True, exist_ok=True)
+        r_features, errs_normalized, \
+        errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[i])
+        total_time = total_time + elaps
+        total_timesteps = total_timesteps + r_features.shape[2]
+        print('Errors')
+        print(errs)
+        #if doplot:
+            #plot_rollout(r_features, dataset.graphs[i], params, fdr)ù
+        tot_errs_normalized = tot_errs_normalized + errs_normalized
+        tot_errs = tot_errs + errs
 
-    N = len(dataset.graphs)
-    graph_n = np.random.uniform(0,N, 1).astype(int)[0]
-    if doplot:
-        for i in range(5):
-            node = i
-            print(dataset.graphs[graph_n].ndata['k'])
-            r_features, errs_normalized, \
-            errs, diff, elaps = rollout(gnn_model, params, dataset.graphs[graph_n])
-            plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
-            # dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], 
-            #                                                                            'flux', params['statistics'], 'features')
-            plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
-            plt.show()
-        print(errs_normalized)
-        # print(th.max(th.abs(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:])))
     print('-------------------------------------')
     print('Global statistics')
     print('Errors')
@@ -119,7 +91,7 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N, \
            total_time / N, total_timesteps / N
 
-def get_gnn_and_graphs(path, graphs_folder = 'graphs_training/', 
+def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm/', 
                        data_location = 'data/'):
 
     """
@@ -166,7 +138,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_training/',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_training/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
     """
     Get datasets and GNN given the path to a saved model folder.
 
@@ -191,6 +163,36 @@ def get_dataset_and_gnn(path, graphs_folder = 'graphs_training/', data_location 
 
     dataset = dset.generate_dataset_from_params(graphs, params)
     return dataset, gnn_model, params
+
+def plot_predictions(dataset, split_name, gnn_model, params, graph_idx=-1):
+
+    # np.random.seed(50)
+    dataset = dataset[split_name]
+    N = len(dataset.graphs)
+    if graph_idx == -1 or graph_idx >= N:
+        graph_n = np.random.uniform(0,N, 1).astype(int)[0]
+    graph_n = graph_idx
+    k = dataset.graphs[graph_n].ndata['k'][0][0][0]
+    r_features, errs_normalized, \
+        errs, _, _ = rollout(gnn_model, params, dataset.graphs[graph_n])
+    r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params['statistics'], 'labels')
+    dataset.graphs[graph_n].ndata['nfeatures'][:,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][:,0,:],'flux', params['statistics'], 'labels')
+
+    print('k = ', k)
+    for node in range(1,4):
+        # r_features[node,0,:] = gng.invert_normalize(r_features[node,0,:],'flux', params['statistics'], 'labels')
+        plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
+        # dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:],'flux', params['statistics'], 'labels')
+        plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
+        plt.legend(['prediction', 'real'])
+        plt.xlabel('time steps')
+        plt.ylabel('heat flux')
+        plt.title('node ' + str(node))
+        plt.show()
+
+    print(errs_normalized)
+
+    return errs_normalized
 
 def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new/', data_location = 'data/'):
     
@@ -218,11 +220,20 @@ def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new/', data_locati
     
     r_features, errs_normalized, \
             errs, diff, elaps = rollout(gnn_model, params2, graphs[graph_name])
-    for node in range(5):
+    r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params['statistics'], 'labels')
+    graphs[graph_name].ndata['nfeatures'][:,0,:] =gng.invert_normalize(graphs[graph_name].ndata['nfeatures'][:,0,:],'flux', params['statistics'], 'labels')
+    
+    for node in range(1,4):
         plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
         plt.plot(graphs[graph_name].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
+        plt.legend(['prediction', 'real'])
+        plt.xlabel('time steps')
+        plt.ylabel('heat flux')
+        plt.title('node ' + str(node))
         plt.show()
+    print(errs_normalized)
 
+    return errs_normalized
 
 """
 This function expects the location of a saved model folder as command line
@@ -232,11 +243,12 @@ argument. This is typically located in 'models/' after launching
 if __name__ == '__main__':
     path = sys.argv[1]
 
-    # dataset, gnn_model, params = get_dataset_and_gnn(path)
+    dataset, gnn_model, params = get_dataset_and_gnn(path)
 
     if os.path.exists('results'):
         shutil.rmtree('results')
 
-    # evaluate_all_models(dataset, 'train', gnn_model, params, True)
+    # plot_predictions(dataset, 'test', gnn_model, params, graph_idx=-1)
+    # evaluate_all_models(dataset, 'train', gnn_model, params)
     # evaluate_all_models(dataset, 'test', gnn_model, params, True)
-    test_new_graphs(path, 'k_188.41.grph')
+    test_new_graphs(path, 'k_67.44.grph')

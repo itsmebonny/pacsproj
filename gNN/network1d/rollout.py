@@ -205,17 +205,17 @@ def rollout(gnn_model, params, graph, average_branches = False):
     errs_normalized = th.sqrt(errs)
 
     tfc[:,0,:] = nz.invert_normalize(tfc[:,0,:], 'flux', 
-                                     params['statistics'], 'features')
+                                     params['statistics'], 'labels')
     # tfc[:,1,:] = nz.invert_normalize(tfc[:,1,:], 'dt', 
     #                                  params['statistics'], 'features')
 
     rfc[:,0,:] = nz.invert_normalize(rfc[:,0,:], 'flux', 
-                                     params['statistics'], 'features')
+                                     params['statistics'], 'labels')
     if params['nout'] == 2:
         tfc[:,1,:] = nz.invert_normalize(tfc[:,1,:], 'pressure', 
-                                     params['statistics'], 'features')
+                                     params['statistics'], 'labels')
         rfc[:,1,:] = nz.invert_normalize(rfc[:,1,:], 'pressure', 
-                                         params['statistics'], 'features')
+                                         params['statistics'], 'labels')
     # rfc[:,1,:] = nz.invert_normalize(rfc[:,1,:], 'dt', 
     #                                  params['statistics'], 'features')
 
@@ -224,7 +224,7 @@ def rollout(gnn_model, params, graph, average_branches = False):
     errs = errs / th.sum(th.sum(tfc**2, dim = 0), dim = 1)
     errs = th.sqrt(errs)
     return r_features.detach().numpy(), errs_normalized.detach().numpy(), \
-           errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start, 
+           errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start
 
     
 

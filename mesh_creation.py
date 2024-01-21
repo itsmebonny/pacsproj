@@ -54,13 +54,13 @@ for it in range(args.nmesh):
         gmsh.model.geo.addPlaneSurface([face])
 
     #physical group
-    gmsh.model.addPhysicalGroup(1, list_lines_x, 1) # horizontal
-    gmsh.model.addPhysicalGroup(1, [list_lines_y[0]], 2) # left wall
-    gmsh.model.addPhysicalGroup(1, [list_lines_y[-1]], 3) # right wall
+    gmsh.model.geo.addPhysicalGroup(1, list_lines_x, 1) # horizontal
+    gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[0]], 2) # left wall
+    gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[-1]], 3) # right wall
     for i in range(1,len(list_lines_y)-1): # interfaces
-        model.addPhysicalGroup(1, [list_lines_y[i]], i+3)
+        gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[i]], i+3)
     for j in range(len(faces)): # faces
-        gmsh.model.addPhysicalGroup(2, [faces[j]], i+j+4)
+        gmsh.model.geo.addPhysicalGroup(2, [faces[j]], i+j+4)
 
     gmsh.model.geo.synchronize()
     # Generate mesh:
@@ -68,7 +68,7 @@ for it in range(args.nmesh):
 
     # Write mesh data:
     gmsh.option.setNumber("Mesh.MshFileVersion",2.2)
-    gmsh.write(f"data/mesh_long/RandomMesh_{it}.msh")
+    gmsh.write(f"data/mesh_new/RandomMesh_{it}.msh")
 
     # Creates graphical user interface
     #if 'close' not in sys.argv:

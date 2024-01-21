@@ -515,7 +515,7 @@ def parse_command_line_arguments():
 
     parser.add_argument('--bs', help='batch size', type=int, default=32)
     parser.add_argument('--epochs', help='total number of epochs', type=int,
-                        default=100)
+                        default=500)
     parser.add_argument('--lr_decay', help='learning rate decay', type=float,
                         default=0.001)
     parser.add_argument('--lr', help='learning rate', type=float, default=0.01)
@@ -602,7 +602,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_training/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -692,7 +692,7 @@ if __name__ == "__main__":
                 'edges_features': edges_features,
                 'target_features': target_features}
     training(parallel, rank, 
-             graphs_folder = 'graphs_training/', 
+             graphs_folder = 'graphs_rm/', 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()
