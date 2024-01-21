@@ -445,11 +445,50 @@ In this file, we implemented two additional functions:
 \section{Results}
 
 In this section we show the results on the test case described in the section \ref{testcase}. 
-In Figure \ref{  } 
-
-
 
 As we can see from Figure \ref{}, the model is able to predict the heat flux at the interfaces with good accuracy when we test it on graphs from the training and the test set. 
+
+\begin{figure}[H]
+    \centering
+    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/loss.jpg}}
+    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/metric.jpg}}
+    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/rollout.jpg}}
+    \caption{Loss, metric and rollour error during the training.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Heat flux at interface 1.]{\includegraphics[width=0.3\textwidth]{Images/train_node1_k59.76.png}}
+    \subfloat[Heat flux at interface 2.]{\includegraphics[width=0.3\textwidth]{Images/train_node2_k59.76.png}}
+    \subfloat[Heat flux at interface 3.]{\includegraphics[width=0.3\textwidth]{Images/train_node3_k59.76.png}}
+    \caption{Real heat flux at the interfaces predicted by the model on a graph from the training set with diffusivity constant \(k=59.76\).}
+    \label{train}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Heat flux at interface 1.]{\includegraphics[width=0.3\textwidth]{Images/test_node1_k99.66.png}}
+    \subfloat[Heat flux at interface 2.]{\includegraphics[width=0.3\textwidth]{Images/test_node2_k99.66.png}}
+    \subfloat[Heat flux at interface 3.]{\includegraphics[width=0.3\textwidth]{Images/test_node3_k99.66.png}}
+    \caption{Real heat flux at the interfaces predicted by the model on a graph from the test set with diffusivity constant \(k=99.66\).}
+    \label{test}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[Heat flux at interface 1.]{\includegraphics[width=0.3\textwidth]{Images/new_node1_k3.05.png}}
+    \subfloat[Heat flux at interface 2.]{\includegraphics[width=0.3\textwidth]{Images/new_node2_k3.05.png}}
+    \subfloat[Heat flux at interface 3.]{\includegraphics[width=0.3\textwidth]{Images/new_node3_k3.05.png}}
+    \caption{Real heat flux at the interfaces predicted by the model on a new graph with diffusivity constant \(k=3.05\).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node1_k67.44.png}}
+    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node2_k67.44.png}}
+    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node3_k67.44.png}}
+    \caption{Real heat flux at the interfaces predicted by the model on a new graph with diffusivity constant \(k=67.44\).}
+\end{figure}
 
 %-----------------------------------------------------------------------------
 % Further work
