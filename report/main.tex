@@ -419,8 +419,13 @@ bcs\_gnn & Boundary conditions of the GNN \\
 
 With all the hyperparameters set, we can start the training process. Since this part of the code was only modified by us, we will not go into much detail, but we will only describe the main steps. The training starts by taking a dataset composed of \texttt{DGL} graphs, which are split into a train set and a test set. Then are defined a loss (MSE) and a metric (MAE). The dataset is created in such a way that to train the network on all the graphs a map is needed so that when a single time-step is evaluated, the network is able to map that single time-step to the correct graph. The time-step is performed using the function \texttt{perform\_timestep} from the \texttt{rollout.py} file. This function takes as input the model, the graph and the previous time-step and predict the value of the quantity of interest at the next step in time. This function is used also when evaluating the model since when we use it while training we compute the loss between the model's prediction and the ground truth, updating the weights of the network accordingly, while when we compute the rollout errors we use the model in inference mode and then compute the error between the prediction and the ground truth.
 
-TODO: spiegare cosa abbiamo modificato nel codice originale (generalizzato a qualsiasi numero di output) 
-
+While the original implementation was meant to work only with blood flow data, we modified the original code so that, given a suitable dataset, it can be used to solve any problem. The main changes that we made are the following:
+\begin{itemize}
+    \item We modified the data generation part of the code to make it suitable for any kind of problem. In particular, we made sure that during the dataset creation, the \(N\) Quantities of Interest (QoI) are stored in the first \(N\) position of the dictionary containing the node features. This is done to make sure that the network can access the QoI easily. 
+    \item We modified the dataset generation part in a way such that the program is able to create \(N\) deltas, one for each QoI. In this way we obtain our true update of the system state, which is the difference between the QoI at the current time-step and the QoI at the previous time-step. These deltas will be used to compute the loss of the network. 
+    \item We modified the \texttt{training.py} file to make it able to take as input the number of outputs needed by the network. In this way we have completely generalized our library to be able to receive as input any suitable dataset.
+    
+\end{itemize}
 \subsection*{Tester}
 The \texttt{tester.py} file is used to test the trained model on graphs from the training and test set and on new graphs. The file is composed of the following already implemented functions: 
 \begin{itemize}
