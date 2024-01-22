@@ -445,16 +445,35 @@ In this file, we implemented two additional functions:
 \section{Results}
 
 In this section we show the results on the test case described in the section \ref{testcase}. 
-
-As we can see from Figure \ref{}, the model is able to predict the heat flux at the interfaces with good accuracy when we test it on graphs from the training and the test set. 
+In Figure \ref{loss} the performance of the model is shown in terms of loss, metric and rollout error during the training. 
+The loss function considered is the one defined in equation \ref{mse}, while the metric is the mean absolute error between the model's predictions and the real data. 
+The rollout error is computed as the mean squared error between the model's predictions and the real data during the rollout phase of a graph randomly selected in the dataset. 
+In Table \ref{errors} we show the final average rollout errors on the training and the test set. 
 
 \begin{figure}[H]
     \centering
-    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/loss.jpg}}
-    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/metric.jpg}}
-    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/rollout.jpg}}
-    \caption{Loss, metric and rollour error during the training.}
+    \subfloat[Decay of loss function over epochs.]{\includegraphics[width=0.28\textwidth]{Images/loss.jpg}}
+    \subfloat[Decay of metric function over epochs.]{\includegraphics[width=0.28\textwidth]{Images/metric.jpg}}
+    \subfloat[Rollout error over epochs.]{\includegraphics[width=0.28\textwidth]{Images/rollout.jpg}}
+    \caption{Loss, metric and rollout error during the training.}
+    \label{loss}
 \end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        \textbf{Dataset} & \textbf{Rollout error} \\
+        \hline
+        Training & 0.026 \\
+        Test & 0.029 \\
+        \hline
+    \end{tabular}
+    \caption{Average rollout error on the training and the test set.}
+\end{table}
+
+In Figures \ref{train} and \ref{test} we can see some example of the model's predictions on each internal node of a graph from the training and the test set respectively. We don't show the predictions on the inlet and the outlet nodes since they are imposed by the boundary conditions and not predicted by the model.
+In general, the model is able to predict the heat flux at the interfaces with good accuracy when we test it on graphs from the training and the test set. 
 
 \begin{figure}[H]
     \centering
@@ -474,12 +493,20 @@ As we can see from Figure \ref{}, the model is able to predict the heat flux at 
     \label{test}
 \end{figure}
 
+For a more accurate evaluation of the model's performance, we tested it on new graphs that were not included in the dataset. 
+The predictions on these graphs compared to the real data are shown in Figures \ref{new1} and \ref{new2}. 
+These graphs are generated solving the heat equations on different meshes and with different thermal conductivity constants with respect to the ones used to generate the dataset. 
+We can observe that the predictions are more accurate on the nodes near to the inlet and less accurate on the nodes near to the outlet. 
+Moreover, we have a slightly better performance on the graph with a higher \(k\). 
+This could be due to the fact that with a lower diffusivity constant the values of the heat flux are smaller and the model has more difficulties in predicting them.
+
 \begin{figure}[H]
     \centering
     \subfloat[Heat flux at interface 1.]{\includegraphics[width=0.3\textwidth]{Images/new_node1_k3.05.png}}
     \subfloat[Heat flux at interface 2.]{\includegraphics[width=0.3\textwidth]{Images/new_node2_k3.05.png}}
     \subfloat[Heat flux at interface 3.]{\includegraphics[width=0.3\textwidth]{Images/new_node3_k3.05.png}}
     \caption{Real heat flux at the interfaces predicted by the model on a new graph with diffusivity constant \(k=3.05\).}
+    \label{new1}
 \end{figure}
 
 \begin{figure}[H]
@@ -488,6 +515,7 @@ As we can see from Figure \ref{}, the model is able to predict the heat flux at 
     \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node2_k67.44.png}}
     \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node3_k67.44.png}}
     \caption{Real heat flux at the interfaces predicted by the model on a new graph with diffusivity constant \(k=67.44\).}
+    \label{new2}
 \end{figure}
 
 %-----------------------------------------------------------------------------
