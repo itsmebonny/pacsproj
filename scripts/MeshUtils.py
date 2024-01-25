@@ -4,7 +4,8 @@ from dolfin import *
 import numpy as np
 import matplotlib.pyplot as plt
 import GenerateGraph as gg
-import threading
+import os
+import sys
 
 class MeshCreator:
     """
@@ -51,6 +52,10 @@ class MeshCreator:
             plot: A flag indicating whether to plot the mesh.
 
         """
+        #check existence of output_dir 
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
         np.random.seed(self.seed)
         for it in range(self.nmesh):
             # Initialize Gmsh
@@ -63,10 +68,11 @@ class MeshCreator:
             points = []
             for i in range(self.nodes):
                 h = round(np.random.uniform(self.hmin, self.hmax),2)
+                
+                points += [gmsh.model.geo.addPoint(wold, -h, 0, self.lc)]
+                points += [gmsh.model.geo.addPoint(wold, h, 0, self.lc)]
                 if self.spacing:
                     w = round(np.random.uniform(self.wmin, self.wmax),2)
-                points += [gmsh.model.geo.addPoint(w + wold, -h, 0, self.lc)]
-                points += [gmsh.model.geo.addPoint(w + wold, h, 0, self.lc)]
                 wold += w
             # Define the rectangle coordinates
             print(points)
@@ -90,9 +96,9 @@ class MeshCreator:
                 gmsh.model.geo.addPlaneSurface([face])
 
             #physical group
-            gmsh.model.addPhysicalGroup(1, list_lines_x, 1) # horizontal
-            gmsh.model.addPhysicalGroup(1, [list_lines_y[0]], 2) # left wall
-            gmsh.model.addPhysicalGroup(1, [list_lines_y[-1]], 3) # right wall
+            gmsh.model.geo.addPhysicalGroup(1, list_lines_x, 1) # horizontal
+            gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[0]], 2) # left wall
+            gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[-1]], 3) # right wall
             for i in range(1,len(list_lines_y)-1): # interfaces
                 model.addPhysicalGroup(1, [list_lines_y[i]], i+3)
             for j in range(len(faces)): # faces
@@ -113,6 +119,25 @@ class MeshCreator:
 
             # It finalize the Gmsh API
             gmsh.finalize()
+        # Check if the provided path is a directory
+        if not os.path.isdir(output_dir):
+            print("Error: '{}' is not a valid directory.".format(output_dir))
+            sys.exit(1)
+
+        # Iterate over all files in the folder and run dolfin-convert
+        for file_name in os.listdir(output_dir):
+            if file_name.endswith(".msh"):
+                # Extract the filename without extension
+                filename = os.path.splitext(file_name)[0]
+
+                # Run dolfin-convert
+                file_path = os.path.join(output_dir, file_name)
+                output_path = os.path.join(output_dir, "{}.xml".format(filename))
+                
+                print("Converting file: {}".format(file_path))
+                os.system("dolfin-convert {} {}".format(file_path, output_path))
+
+        print("Conversion complete.")
 
 class MeshLoader:
 
@@ -174,5 +199,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mesh_creator = MeshCreator(args)
-    mesh_creator.create_mesh( "Prova","data/mesh_test")
+    mesh_creator.create_mesh( "TestMeshes","data/mesh_test2")
     

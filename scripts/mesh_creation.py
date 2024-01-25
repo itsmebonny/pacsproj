@@ -27,11 +27,12 @@ for it in range(args.nmesh):
     points = []
     for i in range(args.nodes):
         h = round(np.random.uniform(args.hmin, args.hmax),2)
+        
+            
+        points += [gmsh.model.geo.addPoint(wold, -h, 0, lc)]
+        points += [gmsh.model.geo.addPoint(wold, h, 0, lc)]
         if args.spacing:
             w = round(np.random.uniform(args.wmin, args.wmax),2)
-            
-        points += [gmsh.model.geo.addPoint(w + wold, -h, 0, lc)]
-        points += [gmsh.model.geo.addPoint(w + wold, h, 0, lc)]
         wold += w
     # Define the rectangle coordinates
 
