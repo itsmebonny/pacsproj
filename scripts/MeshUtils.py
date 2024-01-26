@@ -1,15 +1,15 @@
-"""
-@file MeshUtils.py
-@brief This file contains a mesh creator that generates meshes using Gmsh and a mesh loader that loads meshes from xml files.
+#!/usr/bin/env python3
 
-@details In this file there are two classes: MeshCreator and MeshLoader. The first one is used to generate meshes using Gmsh and to convert meshes from msh to xml format. The second one is used to load meshes from xml files to be used in FEniCS. The file contains also a main function to call the MeshCreator class, the mesh parameters can be set in the main function or using the command line.
-
-@author
-Andrea Bonifacio and Sara Gazzoni
-
-@date
-26/01/2024
-"""
+## @package MeshUtils
+#  @brief This file contains utilities for creating and loading meshes.
+#
+#  The MeshUtils file contains two classes: MeshCreator and MeshLoader. 
+#  The MeshCreator class is used to generate meshes using Gmsh and to convert meshes from msh to xml format. 
+#  The MeshLoader class is used to load meshes from xml files to be used in FEniCS. 
+#  The file also contains a main function to call the MeshCreator class. 
+#  The mesh parameters can be set in the main function or using the command line.
+#
+#  @authors Andrea Bonifacio and Sara Gazzoni
 
 import gmsh
 import argparse

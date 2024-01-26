@@ -1,17 +1,13 @@
-"""
-@file GenerateData.py
-@brief This file implements a solver to solve the Heat Equation and the Stokes equation given a mesh and the problems parameters. It contains also a data generator to store the data and the solutions of the problem solved in a dgl graph.  
+#!/usr/bin/env python3
 
-@details
+## @package GenerateData
+#  @brief This file implements a solver to solve the Heat Equation and the Stokes equation given a mesh and the problems parameters. 
+# 
+#  It contains also a data generator to store the data and the solutions of the problem solved in a dgl graph.  
+#
+#  @authors Andrea Bonifacio and Sara Gazzoni
 
-@note
 
-@author
-Andrea Bonifacio and Sara Gazzoni
-
-@date
-26/01/2024
-"""
 
 from dolfin import *
 import numpy as np
