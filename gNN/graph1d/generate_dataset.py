@@ -234,7 +234,7 @@ def split(graphs, divs, dataset_info):
     names = [graph_name for graph_name in graphs]
     # we do this to keep sims with the same last number in the same group
     # forse a noi non serve questa cosa non mi ricordo cosa vuol dire l'ultimo numero 
-    dictnames = {}
+    dictnames = dict()
     for name in names:
         simname = name.split('.')[0] + '.' + name.split('.')[1]
         if simname not in dictnames:
@@ -252,14 +252,14 @@ def split(graphs, divs, dataset_info):
     random.seed(10)
     random.shuffle(names)
 
-    sublists = {}
+    sublists = dict()
     for name in names:
         type_ = dataset_info[name]['model_type']
         if type_ not in sublists:
             sublists[type_] = []
         sublists[type_].append(name)
 
-    subsets = {}
+    subsets = dict()
     for sublist_n, sublist_v in sublists.items():
         subsets[sublist_n] = list(chunks(sublist_v, divs))
         # print('subset',sublist_n, len(subsets[sublist_n][0]))
@@ -271,7 +271,7 @@ def split(graphs, divs, dataset_info):
             del subsets[sublist_n][-1]
         nsets = len(subsets[sublist_n])
 
-    subsets_graph_names = {}
+    subsets_graph_names = dict()
     for subset_n, subset_v in subsets.items():
         list_all = []
 

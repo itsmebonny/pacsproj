@@ -550,8 +550,8 @@ class DataNS(DataGenerator):
         - td_dict_u: A dictionary containing the time-dependent data for the velocity.
         - td_dict_p: A dictionary containing the time-dependent data for the pressure.
         """
-        td_dict_u = {}
-        td_dict_p = {}
+        td_dict_u = dict()
+        td_dict_p = dict()
         for t in range(len(self.solver.ts)):
             td_dict_u[self.solver.ts[t]] = np.zeros(self.NNodes)
             td_dict_p[self.solver.ts[t]] = np.zeros(self.NNodes)
@@ -641,7 +641,7 @@ class DataHeat(DataGenerator):
         Returns:
         - td_dict: A dictionary containing the time-dependent data for the temperature.
         """
-        td_dict = {}
+        td_dict = dict()
         for t in range(len(self.solver.ts)):
             td_dict[self.solver.ts[t]] = np.zeros(self.NNodes)
             it = 0

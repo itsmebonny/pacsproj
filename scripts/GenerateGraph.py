@@ -1,7 +1,11 @@
+
 import dgl 
 import torch as th
 import GenerateData as gd
 import numpy as np
+import os
+import json
+
 
 def generate_graph(point_data, points, edges_data, edges1, edges2):
     """
@@ -87,3 +91,34 @@ def save_graph(graph, filename, output_dir = "data/graphs/"):
     
     dgl.save_graphs(output_dir+filename+".grph", graph)
     print("Graph saved to disk.")
+
+def generate_json(output_dir):
+
+    input_directory = os.path.expanduser(output_dir)
+
+    input_directory = os.path.realpath(input_directory)
+
+    # Initialize an empty dictionary to store JSON objects for each file
+    json_dict = dict()
+
+    # Iterate through each .grph file in the directory
+    for graph_file in os.listdir(input_directory):
+        if graph_file.endswith(".grph"):
+            # Extract the filename without extension
+            filename_no_extension = os.path.splitext(graph_file)[0]
+
+            # # Extract the mu parameter from the filename (assuming it is in the format k_11.3.grph)
+            # mu_match = re.search(r'_(\d+(\.\d+)?)', filename_no_extension)
+            # mu = mu_match.group(1) if mu_match else None
+
+            # Create a dictionary for each .grph file
+            json_dict[filename_no_extension] = {
+                "model_type": "heat_eq"
+            }
+
+    # Save the dictionary as a JSON file
+    json_file_path = os.path.join(input_directory, "dataset_info.json")
+    with open(json_file_path, 'w') as json_file:
+        json.dump(json_dict, json_file, indent=2)
+
+    print(f"Created {json_file_path}")

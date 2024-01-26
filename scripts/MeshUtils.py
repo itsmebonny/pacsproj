@@ -40,6 +40,17 @@ class MeshCreator:
         self.spacing = args.spacing
         self.nodes = args.nodes
 
+    # def __init__(self, nmesh, seed, hmax, hmin, lc, wmax, wmin, spacing, nodes):
+    #     self.nmesh = nmesh
+    #     self.seed = seed
+    #     self.hmax = hmax
+    #     self.hmin = hmin
+    #     self.lc = lc
+    #     self.wmax = wmax
+    #     self.wmin = wmin
+    #     self.spacing = spacing
+    #     self.nodes = nodes
+
         # aggiungere se fare interfaccia random o no
 
     def create_mesh(self, filename, output_dir):
@@ -139,6 +150,21 @@ class MeshCreator:
 
         print("Conversion complete.")
 
+    def create_tags(self):
+        """
+        Create tags for the mesh.
+
+        Returns:
+            A dictionary containing the tags for the mesh.
+
+        """
+        tags = {"walls":[1],"inlet":[2],"outlet":[3],"interface":[],"faces":[]}
+        for i in range(4,4+self.nodes-2):
+            tags["interface"].append(i)
+        for j in range(i+1,i+self.nodes):
+            tags["faces"].append(j)
+        return tags
+
 class MeshLoader:
 
     def __init__(self,filename):
@@ -150,14 +176,27 @@ class MeshLoader:
         self.h = self.mesh.hmin()
     
     
-    def update_tags(self,tags):
+    def update_tags(self,tags={},nodes = -1):
         """
         Method to save the tags of the boundaries and faces of the mesh
 
         The method takes as input a dictionary with the following keys: 
         'walls', 'inlet', 'outlet', 'interface', 'faces' and as values a list of the corresponding tags
         """
-        self.tags = tags
+        if nodes == -1 and tags != {}:
+            self.tags = tags
+        elif nodes == -1 and tags == {}:
+            print("Error: tags not provided")
+            sys.exit(1)
+        else:
+            while nodes <= 0:
+                nodes = int(input("Insert the number of nodes (MUST BE POSITIVE): "))
+            self.tags = {"walls":[1],"inlet":[2],"outlet":[3],"interface":[],"faces":[]}
+            for i in range(4,4+nodes-2):
+                self.tags["interface"].append(i)
+            for j in range(i+1,i+nodes):
+                self.tags["faces"].append(j)
+
         self.rename_boundaries = MeshFunction("size_t", self.mesh,1)
         self.rename_boundaries.set_all(0)
         self.rename_faces = MeshFunction("size_t", self.mesh, 2)
@@ -183,6 +222,9 @@ class MeshLoader:
         self.dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)
 
         return self.dS, self.ds, self.dx
+    
+    def plot_mesh(self):
+        plot(self.mesh)
 
 if __name__ == "__main__":
 

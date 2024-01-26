@@ -525,7 +525,7 @@ def create_junction_edges(points, bif_id, edges1, edges2, outlets):
     npoints = bif_id.size
     jun_inlet_mask = [0] * npoints
     jun_mask = [0] * npoints
-    juncts_inlets = {}
+    juncts_inlets = dict()
     jedges1 = []
     jedges2 = []
     for ipoint in range(npoints - 1):
@@ -548,7 +548,7 @@ def create_junction_edges(points, bif_id, edges1, edges2, outlets):
             jedges2.append(ipoint)
             jun_mask[ipoint] = 1
     masks = {'inlets': jun_inlet_mask, 'all': jun_mask}
-    dists = {}
+    dists = dict()
     for jun_id in juncts_inlets:
         d, _ = dijkstra_algorithm(points, edges1, edges2, juncts_inlets[jun_id])
         dists[juncts_inlets[jun_id]] = d
@@ -754,7 +754,7 @@ def generate_graph(point_data, points, edges1, edges2,
         distance = np.concatenate((distance, jdistance))
         rel_position = np.concatenate((rel_position, jrel_position), axis = 0)
     else:
-        jmasks = {}
+        jmasks = dict()
         jmasks['inlets'] = np.zeros(bif_id.size)
         jmasks['all'] = np.zeros(bif_id.size)
 
@@ -877,7 +877,7 @@ def create_partitions(points, bif_id,
                                                             inlets)
         ppoints = points[sampling_indices,:]
 
-        ppoint_data = {}
+        ppoint_data = dict()
         for ndata in point_data:
             ppoint_data[ndata] = point_data[ndata][sampling_indices]
 
@@ -1041,8 +1041,8 @@ if __name__ == "__main__":
 
             intime = 0
             for icopy in range(ncopies):
-                c_pressure = {}
-                c_flowrate = {}
+                c_pressure = dict()
+                c_flowrate = dict()
                 
                 for t in times[intime:]:
                     c_pressure[t] = pressure[t][part['sampling_indices']]

@@ -65,7 +65,7 @@ def collect_arrays(celldata, components = None):
         A dictionary of arrays (key: array name, value: numpy array)
   
     """
-    res = {}
+    res = dict()
     for i in range(celldata.GetNumberOfArrays()):
         name = celldata.GetArrayName(i)
         data = celldata.GetArray(i)
@@ -89,7 +89,7 @@ def gather_array(arrays, arrayname, mintime = 1e-12):
         Dictionary of arrays (key: time, value: numpy array)
   
     """
-    out   = {}
+    out   = dict()
     for array in arrays:
         if arrayname in array:
             time = float(array.replace(arrayname + "_",""))

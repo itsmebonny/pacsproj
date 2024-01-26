@@ -114,7 +114,7 @@ def load_graphs(input_dir):
     random.seed(10)
     random.shuffle(files)
 
-    graphs = {}
+    graphs = dict()
     for file in tqdm(files, desc = 'Loading graphs', colour='green'):
         if 'grph' in file:
             graphs[file] = lg(input_dir + file)[0][0]
@@ -142,7 +142,7 @@ def compute_statistics(graphs, fields, statistics):
     print('Compute statistics')
     for etype in fields:
             for field_name in fields[etype]:
-                cur_statistics = {}
+                cur_statistics = dict()
                 minv = np.infty
                 maxv = np.NINF
                 Ns = []
@@ -198,7 +198,7 @@ def compute_statistics(graphs, fields, statistics):
         graph_sts['nodes'].append(graph.ndata['x'].shape[0])
 
     for name in graph_sts:
-        cur_statistics = {}
+        cur_statistics = dict()
 
         cur_statistics['min'] = np.min(graph_sts[name])
         cur_statistics['max'] = np.max(graph_sts[name])
@@ -398,7 +398,7 @@ def restrict_graphs(graphs, types, types_to_keep):
         restricted list of DGL graphs
 
     """
-    selected_graphs = {}
+    selected_graphs = dict()
     for graph in graphs:
         id = graph.replace('.grph','').split('.')
         if types[id[0] + '.' + id[1]]['model_type'] in types_to_keep:
@@ -449,7 +449,7 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
     #                              types_to_keep['types_to_keep'])
 
     if n_graphs_to_keep != -1:
-        graphs_ = {}
+        graphs_ = dict()
         graphs_names = []
         count = 0
         for key, value in graphs.items():
