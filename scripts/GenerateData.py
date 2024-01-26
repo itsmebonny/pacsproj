@@ -1,13 +1,27 @@
+"""
+@file GenerateData.py
+@brief This file implements a solver to solve the Heat Equation and the Stokes equation given a mesh and the problems parameters. It contains also a data generator to store the data and the solutions of the problem solved in a dgl graph.  
+
+@details
+
+@note
+
+@author
+Andrea Bonifacio and Sara Gazzoni
+
+@date
+26/01/2024
+"""
+
 from dolfin import *
 import numpy as np
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
 import GenerateGraph as gg
 import torch as th
-
-import matplotlib as mpl  #temporaneo
-
-
+import os
+import json
+import re
             
 class Solver(ABC):
     
@@ -422,7 +436,7 @@ class DataGenerator(ABC):
         # self.NNodes = len(center_line)
         return center_line
 
-    def save_graph(self, fields_names, output_dir = "data/graphs/"):
+    def save_graph(self, output_dir, model_type, fields_names):
         """
         Saves the graph with the specified fields.
 
@@ -444,10 +458,13 @@ class DataGenerator(ABC):
         if not hasattr(self, 'EdgesData'):
             self.edges_data()
         self.graph = gg.generate_graph(self.NodesData, self.center_line, self.EdgesData, self.edges1, self.edges2)
+        print(self.TDNodesData)
         for i,key in enumerate(fields_names):
             gg.add_field(self.graph, self.TDNodesData[i], key)
-        gg.save_graph(self.graph, f"k_{self.solver.k}", output_dir)
+        gg.save(self.graph, f"k_{self.solver.k}", output_dir)
+        gg.generate_json(output_dir,model_type)
         return self.graph
+    
 
 class DataNS(DataGenerator):
     """
@@ -464,6 +481,8 @@ class DataNS(DataGenerator):
         - mesh: The mesh object representing the computational domain.
         """
         super().__init__(solver, mesh)
+        self.model_type = "stokes"
+        self.target_fields = ['flowrate','pressure']
 
     def flux(self,tag,u):
         """
@@ -572,7 +591,7 @@ class DataNS(DataGenerator):
         self.TDNodesData = [td_dict_u, td_dict_p]
         return td_dict_u, td_dict_p
 
-    def save_graph(self,fields_names=['flux','pressure'], output_dir = "data/graphs/"):
+    def save_graph(self, output_dir):
         """
         Saves the graphs of specified fields.
 
@@ -583,7 +602,7 @@ class DataNS(DataGenerator):
         Returns:
         - The result of the super class's save_graph method.
         """
-        return super().save_graph(fields_names,output_dir)
+        return super().save_graph(output_dir,self.model_type,self.target_fields)
     
 
 # Define a subclass DataHeat that inherits from the DataGenerator abstract base class
@@ -602,6 +621,8 @@ class DataHeat(DataGenerator):
         - mesh: The mesh object representing the computational domain.
         """
         super().__init__(solver, mesh)
+        self.model_type = "heat"
+        self.fields_names = ['flux']
 
     
     def flux(self, interface, u):
@@ -655,7 +676,7 @@ class DataHeat(DataGenerator):
         self.TDNodesData = [td_dict]
         return td_dict
     
-    def save_graph(self, fields_names=['flux'], output_dir="data/graphs/"):
+    def save_graph(self, output_dir):
         """
         Saves the graphs of specified fields.
 
@@ -666,4 +687,4 @@ class DataHeat(DataGenerator):
         Returns:
         - The result of the super class's save_graph method.
         """
-        return super().save_graph(fields_names, output_dir)
+        return super().save_graph(output_dir,self.model_type,self.fields_names)

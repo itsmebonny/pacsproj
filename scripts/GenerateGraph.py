@@ -1,3 +1,19 @@
+"""
+@file GenerateGraph.py
+@brief This file contains the functions to generate a dgl graph from the data provided.
+
+@details
+
+
+@note
+
+@author
+Andrea Bonifacio and Sara Gazzoni
+
+@date
+26/01/2024
+"""
+
 
 import dgl 
 import torch as th
@@ -12,8 +28,8 @@ def generate_graph(point_data, points, edges_data, edges1, edges2):
     Generate DGL graph.
 
     Arguments:
-        point_data: dictionary containing point data (key: name, value: data)
-        points: n x 2 numpy array of point coordinates
+        point_data: dictionary containing nodes data (key: name, value: data)
+        points: n x 2 numpy array of nodes coordinates
         edges_data: dictionary containing edge data (key: name, value: data)
         edges1: numpy array containing indices of source nodes for every edge
         edges2: numpy array containing indices of dest nodes for every edge
@@ -22,17 +38,10 @@ def generate_graph(point_data, points, edges_data, edges1, edges2):
         DGL graph
     """
 
-    # inlet = [0]
-    # outlets = [4] #find_outlets(edges1, edges2)
-
-    # indices = {"inlet": inlet, "outlets": outlets}
-
     graph = dgl.graph((edges1, edges2), idtype=th.int32)
-    # k = max(point_data['k'])
-    # length = max(edges_data['length'])
+
     graph.ndata["x"] = th.tensor(points, dtype=th.float32)
     graph.ndata["k"] = th.reshape(th.ones(graph.num_nodes(), dtype=th.float32) * point_data['k'], (-1, 1, 1))
-    # graph.ndata["k"] = th.reshape(th.tensor(point_data['k'], dtype=th.float32), (-1, 1, 1))
     graph.ndata["NodeId"] = th.tensor(point_data['NodeId'], dtype=th.float32)
     graph.ndata["inlet_mask"] = th.tensor(point_data['inlet_mask'], dtype=th.float32)
     graph.ndata["outlet_mask"] = th.tensor(point_data['outlet_mask'], dtype=th.float32)
@@ -52,7 +61,7 @@ def add_field(graph, field, field_name, offset=0):
 
     Arguments:
         graph: DGL graph
-        field: dictionary with (key: timestep, value: field value)
+        field: dictionary containing the time-dependent data (key: timestep, value: field value)
         field_name (string): name of the field
         offset (int): number of timesteps to skip.
                       Default: 0 -> keep all timesteps
@@ -72,14 +81,14 @@ def add_field(graph, field, field_name, offset=0):
     for i, t in enumerate(times):
         f = th.tensor(field[t], dtype=th.float32)
         field_t[:, 0, i] = f
-    # if field_name == "flux":
+
     graph.ndata[field_name] = field_t
     graph.ndata["dt"] = th.reshape(
         th.ones(graph.num_nodes(), dtype=th.float32) * dt, (-1, 1, 1))
     graph.ndata["T"] = th.reshape(
         th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1))
         
-def save_graph(graph, filename, output_dir = "data/graphs/"):
+def save(graph, filename, output_dir = "../data/graphs/"):
     """
     Save graph to disk as a DGL graph.
 
@@ -92,7 +101,14 @@ def save_graph(graph, filename, output_dir = "data/graphs/"):
     dgl.save_graphs(output_dir+filename+".grph", graph)
     print("Graph saved to disk.")
 
-def generate_json(output_dir):
+def generate_json(output_dir,model_type):
+    """
+    Generate JSON file containing information about the dataset.
+
+    Arguments:
+        output_dir (string): path to output directory
+        model_type (string): equation type (e.g. "heat")
+    """
 
     input_directory = os.path.expanduser(output_dir)
 
@@ -107,13 +123,9 @@ def generate_json(output_dir):
             # Extract the filename without extension
             filename_no_extension = os.path.splitext(graph_file)[0]
 
-            # # Extract the mu parameter from the filename (assuming it is in the format k_11.3.grph)
-            # mu_match = re.search(r'_(\d+(\.\d+)?)', filename_no_extension)
-            # mu = mu_match.group(1) if mu_match else None
-
             # Create a dictionary for each .grph file
             json_dict[filename_no_extension] = {
-                "model_type": "heat_eq"
+                "model_type": model_type
             }
 
     # Save the dictionary as a JSON file

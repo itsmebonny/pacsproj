@@ -1,3 +1,16 @@
+"""
+@file MeshUtils.py
+@brief This file contains a mesh creator that generates meshes using Gmsh and a mesh loader that loads meshes from xml files.
+
+@details In this file there are two classes: MeshCreator and MeshLoader. The first one is used to generate meshes using Gmsh and to convert meshes from msh to xml format. The second one is used to load meshes from xml files to be used in FEniCS. The file contains also a main function to call the MeshCreator class, the mesh parameters can be set in the main function or using the command line.
+
+@author
+Andrea Bonifacio and Sara Gazzoni
+
+@date
+26/01/2024
+"""
+
 import gmsh
 import argparse
 from dolfin import *
@@ -6,30 +19,32 @@ import matplotlib.pyplot as plt
 import GenerateGraph as gg
 import os
 import sys
+import json
 
 class MeshCreator:
     """
     A class for creating mesh using Gmsh.
 
-    Args:
-        args: An object containing the arguments for mesh creation.
-
     Attributes:
-        args: The arguments for mesh creation.
-        nmesh: The number of meshes to create.
-        seed: The seed for random number generation.
-        hmax: The maximum value for h.
-        hmin: The minimum value for h.
-        lc: The characteristic length.
-        wmax: The maximum value for w.
-        wmin: The minimum value for w.
-        spacing: A flag indicating whether to use random spacing.
-        nodes: The number of nodes.
+        nmesh: Number of meshes to create.
+        seed: Seed for random number generation.
+        hmax: Maximum value for the interfaces height.
+        hmin: Minimum value for the interfaces height.
+        lc: Characteristic length.
+        wmax: Maximum value for the distance between nodes.
+        wmin: Minimum value for the distance between nodes.
+        spacing: Flag indicating whether the nodes are equispaced or not.
+        nodes: Number of nodes.
 
     """
 
     def __init__(self, args):
-        self.args = args
+        """
+        Constructor for the MeshCreator class.
+
+        Args:
+            args: The arguments for the mesh creation.
+        """
         self.nmesh = args.nmesh
         self.seed = args.seed
         self.hmax = args.hmax
@@ -39,19 +54,6 @@ class MeshCreator:
         self.wmin = args.wmin
         self.spacing = args.spacing
         self.nodes = args.nodes
-
-    # def __init__(self, nmesh, seed, hmax, hmin, lc, wmax, wmin, spacing, nodes):
-    #     self.nmesh = nmesh
-    #     self.seed = seed
-    #     self.hmax = hmax
-    #     self.hmin = hmin
-    #     self.lc = lc
-    #     self.wmax = wmax
-    #     self.wmin = wmin
-    #     self.spacing = spacing
-    #     self.nodes = nodes
-
-        # aggiungere se fare interfaccia random o no
 
     def create_mesh(self, filename, output_dir):
         """
@@ -69,26 +71,22 @@ class MeshCreator:
         
         np.random.seed(self.seed)
         for it in range(self.nmesh):
-            # Initialize Gmsh
             gmsh.initialize()
-
-            # Create a new model
             model = gmsh.model
             w = self.wmax
             wold = 0
             points = []
+
+            # add points 
             for i in range(self.nodes):
                 h = round(np.random.uniform(self.hmin, self.hmax),2)
-                
                 points += [gmsh.model.geo.addPoint(wold, -h, 0, self.lc)]
                 points += [gmsh.model.geo.addPoint(wold, h, 0, self.lc)]
                 if self.spacing:
                     w = round(np.random.uniform(self.wmin, self.wmax),2)
                 wold += w
-            # Define the rectangle coordinates
-            print(points)
 
-            # Add the rectangle to the model
+            # add lines
             list_lines_x=[]
             list_lines_y = []
             for i in range(len(points)-2):
@@ -100,13 +98,14 @@ class MeshCreator:
             for i in range(0,len(points)-1,2):
                 list_lines_y.append(gmsh.model.geo.addLine( points[i], points[i+1] ))
 
+            # add faces
             faces = []
             for i in range(0,len(list_lines_x)-1,2):
                 face = gmsh.model.geo.addCurveLoop([-list_lines_y[i//2], list_lines_x[i], list_lines_y[i//2+1], list_lines_x[i+1]])
                 faces.append(face)
                 gmsh.model.geo.addPlaneSurface([face])
 
-            #physical group
+            # add physical group
             gmsh.model.geo.addPhysicalGroup(1, list_lines_x, 1) # horizontal
             gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[0]], 2) # left wall
             gmsh.model.geo.addPhysicalGroup(1, [list_lines_y[-1]], 3) # right wall
@@ -116,20 +115,21 @@ class MeshCreator:
                 gmsh.model.addPhysicalGroup(2, [faces[j]], i+j+4)
 
             gmsh.model.geo.synchronize()
-            # Generate mesh:
             gmsh.model.mesh.generate()
-
-            # Write mesh data:
             gmsh.option.setNumber("Mesh.MshFileVersion",2.2)
             gmsh.write(output_dir + "/" + filename + f"_{it}.msh")
-
-            # Creates graphical user interface
-            #if 'close' not in sys.argv:
-            # if plot:
-            # gmsh.fltk.run()
-
-            # It finalize the Gmsh API
             gmsh.finalize()
+
+            self.create_info_file(output_dir, filename)
+
+    def convert_mesh(self, output_dir):
+        """
+        Convert the meshes in a given directory from msh to xml format.
+
+        Args:
+            output_dir: The directory containing the meshes to convert.
+        """
+
         # Check if the provided path is a directory
         if not os.path.isdir(output_dir):
             print("Error: '{}' is not a valid directory.".format(output_dir))
@@ -150,24 +150,59 @@ class MeshCreator:
 
         print("Conversion complete.")
 
-    def create_tags(self):
+    def create_info_file(self, output_dir, meshname):
         """
-        Create tags for the mesh.
+        Create a json file containing the mesh information.
 
-        Returns:
-            A dictionary containing the tags for the mesh.
-
+        Args:
+            output_dir: The directory to save the json file.
         """
-        tags = {"walls":[1],"inlet":[2],"outlet":[3],"interface":[],"faces":[]}
-        for i in range(4,4+self.nodes-2):
-            tags["interface"].append(i)
-        for j in range(i+1,i+self.nodes):
-            tags["faces"].append(j)
-        return tags
+
+        json_dict = dict()
+        json_dict["nmesh"] = self.nmesh
+        json_dict["hmax"] = self.hmax
+        json_dict["hmin"] = self.hmin
+        json_dict["lc"] = self.lc
+        json_dict["wmax"] = self.wmax
+        json_dict["wmin"] = self.wmin
+        json_dict["spacing"] = self.spacing
+        json_dict["nodes"] = self.nodes
+        json_dict["mesh_name"] = meshname
+
+        json_file_path = os.path.join(output_dir, "mesh_info.json")
+        with open(json_file_path, 'w') as json_file:
+            json.dump(json_dict, json_file, indent=2)
+        
+        print("Info file created.")
+
 
 class MeshLoader:
+    """
+    A class for loading mesh from a xml file to be used in FEniCS.
+
+    Attributes:
+        meshfile: The name of the mesh file.
+        mesh: The FEniCS mesh.
+        bounds: FEniCS MeshFunction for the boundaries of the mesh.
+        face: FEniCS MeshFunction for the faces of the mesh.
+        n: The normal vector of the mesh.
+        h: The characteristic length of the mesh.
+        tags: A dictionary containing the tags of the mesh.
+        rename_boundaries: FEniCS MeshFunction for the boundaries of the mesh with the tags.
+        rename_faces: FEniCS MeshFunction for the faces of the mesh with the tags.
+        dS: Measure for integration over external boundaries (inlet and outlet).
+        ds: Measure for integration over internal boundaries (interface).
+        dx: Measure for integration over faces.
+    """
 
     def __init__(self,filename):
+        """
+        Constructor for the MeshLoader class.
+
+        Args:
+            filename: The name of the mesh file without extension.
+        """
+
         self.meshfile = filename
         self.mesh = Mesh(self.meshfile + ".xml")
         self.bounds = MeshFunction("size_t", self.mesh, self.meshfile + "_facet_region.xml")
@@ -178,10 +213,13 @@ class MeshLoader:
     
     def update_tags(self,tags={},nodes = -1):
         """
-        Method to save the tags of the boundaries and faces of the mesh
+        Method to save the tags of the boundaries and faces of the mesh.
+        If the number of nodes are provided, the tags are created automatically.
+        If the number of nodes are not provided, the tags must be provided.
 
-        The method takes as input a dictionary with the following keys: 
-        'walls', 'inlet', 'outlet', 'interface', 'faces' and as values a list of the corresponding tags
+        Args:
+            tags: A dictionary containing the tags of the mesh.
+            nodes: The number of nodes of the mesh.
         """
         if nodes == -1 and tags != {}:
             self.tags = tags
@@ -209,23 +247,25 @@ class MeshLoader:
                 for i in self.tags[j]:
                     self.rename_faces.array()[self.face.array()==i] = i
 
-    # method to define measures for integration over boundaries and faces
     def measure_definition(self):
+        """
+        Method to define the measures for the integration.
+        """
 
-        # Define measure for integration over external boundaries (inlet and outlet)
-        self.dS = Measure("dS",domain=self.mesh, subdomain_data=self.rename_boundaries)
-
-        # Define measure for integration over internal boundaries (interface)
-        self.ds = Measure("ds",domain=self.mesh, subdomain_data=self.rename_boundaries)
-
-        # Define measure for integration over faces
-        self.dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)
-
-        return self.dS, self.ds, self.dx
+        self.dS = Measure("dS",domain=self.mesh, subdomain_data=self.rename_boundaries) # measure for integration over external boundaries (inlet and outlet)
+        self.ds = Measure("ds",domain=self.mesh, subdomain_data=self.rename_boundaries) # measure for integration over internal boundaries (interface)
+        self.dx = Measure("dx",domain=self.mesh, subdomain_data=self.rename_faces)      # measure for integration over faces
     
     def plot_mesh(self):
+        """
+        Method to plot the mesh.
+        """
         plot(self.mesh)
 
+
+"""
+The main function launches the mesh creation and conversion. The mesh parameters can be set using the command line and the output directory and the filename can be set in the main function.
+"""
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Mesh creation')
@@ -240,6 +280,10 @@ if __name__ == "__main__":
     parser.add_argument('--wmin', help='min node distance', type=float, default=1.0)
     args = parser.parse_args()
 
+    filename = "test_mesh"
+    output_dir = "data/mesh_test/"
+
     mesh_creator = MeshCreator(args)
-    mesh_creator.create_mesh( "TestMeshes","data/mesh_test2")
+    mesh_creator.create_mesh(filename, output_dir)
+    mesh_creator.convert_mesh(output_dir)
     
