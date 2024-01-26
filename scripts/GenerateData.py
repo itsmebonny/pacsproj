@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 ## @package GenerateData
-#  @brief This file implements a solver to solve the Heat Equation and the Stokes equation given a mesh and the problems parameters. 
+#  @brief This file implements a solver class to solve a variational problem and a data generator class to store the data and the solutions of the problem solved in a dgl graph.
 # 
-#  It contains also a data generator to store the data and the solutions of the problem solved in a dgl graph.  
+#  This file contains the implementation of two abstract classes: Solver and DataGenerator. 
+#  The Solver class is used to solve a variational problem on a given mesh, while the DataGenerator class is used to store the data and the solutions of the problem at each time step in a dgl graph. 
+#  The Solver class is then inherited by two subclasses: Stokes and Heat, which are used to solve the Stokes equation and the heat equation, respectively. 
+#  The DataGenerator class is also inherited by two subclasses: DataNS and DataHeat, which are used to generate the data for the Stokes equations and the heat equation, respectively. 
+#  This class needs to be initialized with the proper solver object and mesh object.
 #
 #  @authors Andrea Bonifacio and Sara Gazzoni
 
@@ -20,8 +24,23 @@ import json
 import re
             
 class Solver(ABC):
+    """
+    This class represents a solver for a variational problem on a given mesh.
+
+    This class is an abstract base class (ABC) and cannot be instantiated.
+
+    Attributes:
+        mesh (Mesh): Mesh object.
+    """
     
     def __init__(self,mesh):
+        """
+        Initialize the Solver class.
+
+        Args: 
+            mesh (Mesh): Mesh object.
+        """
+
         self.mesh = mesh
 
     @abstractmethod 
@@ -38,24 +57,46 @@ class Solver(ABC):
 
 
 class Stokes(Solver):
+    """
+    Class representing a Stokes solver.
+
+    This class inherits from the Solver class and provides methods to solve the Stokes equation.
+
+    Attributes:
+        mesh (Mesh): Mesh object.
+        V (FunctionSpace): Velocity function space.
+        Q (FunctionSpace): Pressure function space.
+        rho (float): Density of the fluid.
+        mu (float): Dynamic viscosity of the fluid.
+        U0 (float): Characteristic velocity of the fluid.
+        L0 (float): Characteristic length of the fluid.
+        inflow (float): Inflow rate of the fluid.
+        f (Expression): Source term.
+        dt (float): Time step.
+        T (float): Final time.
+        k (float): Reynolds number.
+        doplot (bool): Flag indicating whether to plot the solution at each time step.
+        ts (numpy.ndarray): Array of time steps.
+        ut (numpy.ndarray): Array of velocity solutions at each time step.
+        pt (numpy.ndarray): Array of pressure solutions at each time step.
+    """
 
     def __init__(self, mesh, V, Q, rho, mu, U0, L0, inflow, f, dt, T, k, doplot=False):
         """
         Initialize the GenerateData class.
 
-        Parameters:
-        - mesh: the mesh object
-        - V: velocity function space
-        - Q: pressure function space
-        - rho: density
-        - mu: dynamic viscosity
-        - U0: characteristic velocity
-        - L0: characteristic length
-        - inflow: inflow boundary condition
-        - f: source term
-        - dt: time step
-        - T: final time
-        - doplot: flag to plot solution at each time step (default: False)
+        Args:
+            V (FunctionSpace): Velocity function space.
+            Q (FunctionSpace): Pressure function space.
+            rho (float): Density of the fluid.
+            mu (float): Dynamic viscosity of the fluid.
+            U0 (float): Characteristic velocity of the fluid.
+            L0 (float): Characteristic length of the fluid.
+            inflow (float): Inflow rate of the fluid.
+            f (Expression): Source term.
+            dt (float): Time step.
+            T (float): Final time.
+            doplot (bool): Flag indicating whether to plot the solution at each time step.
         """
         super().__init__(mesh)
         self.V = V
@@ -68,7 +109,6 @@ class Stokes(Solver):
         self.f = f
         self.dt = dt
         self.T = T
-        self.k = k
         self.doplot = doplot
 
 
@@ -101,10 +141,8 @@ class Stokes(Solver):
 
     def solve(self):
         """
-        Solves the variational problem for velocity and pressure.
+        Solve the Stokes equation.
 
-        Returns:
-            None
         """
         TH = self.V *self.Q
         W = FunctionSpace(self.mesh.mesh, TH)
@@ -131,13 +169,12 @@ class Stokes(Solver):
         u0 = Function(P)
         p0 = Function(Z)
 
-        # self.k = self.rho * self.U0 * self.L0 / self.mu
-        # self.k = round(self.k,2)
+        self.k = self.rho * self.U0 * self.L0 / self.mu
+        self.k = round(self.k,2)
         a = (1/self.dt)*inner(u,v)*dx + (1/self.k)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx
         L = inner(f,v)*dx + (1/self.dt)*inner(u0,v)*dx
 
         U = Function(W)
-        # t = self.dt
         self.ts = np.arange(0,self.T,self.dt)
         self.ut = np.empty(len(self.ts), dtype=object)
         self.pt = np.empty(len(self.ts), dtype=object)
@@ -166,9 +203,9 @@ class Stokes(Solver):
         """
         Plot the solution u and p.
 
-        Parameters:
-        u (array-like): The solution u.
-        p (array-like): The solution p.
+        Args:
+            u: The velocity solution.
+            p: The pressure solution.
         """
         sol1 = plot(u)
         plt.colorbar(sol1)
@@ -178,13 +215,11 @@ class Stokes(Solver):
         plt.show()
 
 
-# Define a subclass Heat that inherits from the Solver abstract base class to solve Heat equation
 class Heat(Solver):
     """
     Class representing a heat solver.
 
-    This class inherits from the Solver class and provides methods to solve the heat equation
-    using the Discontinuous Galerkin method with non-homogeneous Neumann boundary conditions.
+    This class inherits from the Solver class and provides methods to solve the heat equation using the Discontinuous Galerkin method with non-homogeneous Neumann boundary conditions.
 
     Attributes:
         V (FunctionSpace): Function space for the solution.
@@ -195,9 +230,26 @@ class Heat(Solver):
         T (float): Final time.
         g (Expression): Neumann boundary condition at the inlet.
         doplot (bool): Flag indicating whether to plot the solution at each time step.
+        ts (numpy.ndarray): Array of time steps.
+        ut (numpy.ndarray): Array of solutions at each time step.
     """
 
     def __init__(self, mesh, V, k, f, u0, dt, T, g, doplot=False):
+        """
+        Initialize the Heat class.
+
+        Args:
+            mesh (Mesh): Mesh object.
+            V (FunctionSpace): Function space for the solution.
+            k (float): Thermal conductivity.
+            f (Expression): Source term.
+            u0 (Expression): Initial condition.
+            dt (float): Time step.
+            T (float): Final time.
+            g (Expression): Neumann boundary condition at the inlet.
+            doplot (bool): Flag indicating whether to plot the solution at each time step.
+        """
+
         super().__init__(mesh)
         self.V = V
         self.k = k
@@ -233,9 +285,7 @@ class Heat(Solver):
         """
         Method to solve the heat equation.
 
-        The problem is solved using the Discontinuous Galerkin method 
-        and imposing non-homogeneous Neumann boundary condition at the inlet 
-        and homogeneous Neumann boundary condition at the outlet and walls.
+        The problem is solved using the Discontinuous Galerkin method and imposing non-homogeneous Neumann boundary condition at the inlet and homogeneous Neumann boundary condition at the outlet and walls.
 
         Returns:
             numpy.ndarray: Array of solutions at each time step.
@@ -276,16 +326,12 @@ class Heat(Solver):
         return self.ut 
 
 
-    # Method to plot the solution
     def plot_solution(self, u):
         """
         Plot the solution.
 
         Args:
             u: The solution to be plotted.
-
-        Returns:
-            None
         """
         sol = plot(u)
         plot(u)
@@ -295,7 +341,21 @@ class Heat(Solver):
 
 class DataGenerator(ABC):
     """
-    This class represents a data generator for a solver on a given mesh.
+    This class represents a data generator given a mesh and a solver object. 
+    It stores the data and the solutions of a variational problem in a dgl graph.
+
+    This class is an abstract base class (ABC) and cannot be instantiated.
+
+    Attributes:
+        solver: The solver object.
+        mesh: The mesh object.
+        NNodes: The number of interfaces in the mesh.
+        edges1 (numpy.ndarray): Source nodes of the edges.
+        edges2 (numpy.ndarray): Destination nodes of the edges.
+        center_line (numpy.ndarray): The centerline coordinates of the inlet, interfaces and outlet of the mesh.
+        NodesData (dict): A dictionary containing the nodes features.
+        EdgesData (dict): A dictionary containing the edges features.
+
     """
 
     def __init__(self, solver, mesh):
@@ -312,31 +372,21 @@ class DataGenerator(ABC):
 
     @abstractmethod
     def flux(self):
-        """
-        Abstract method to calculate the flux.
-        """
         pass
 
     @abstractmethod
     def inlet_flux(self,tag, u):
-        """
-        Abstract method to calculate the inlet flux.
-
-        Args:
-            tag: The tag of the inlet.
-            u: The velocity.
-        """
         pass
 
     def area(self,tag):
         """
-        Calculates the area of a given tag.
+        Calculates the area of the face with the specified tag.
 
         Args:
-            tag: The tag of the area.
+            tag: The tag of the face.
 
         Returns:
-            The area of the tag.
+            The area of the face with the specified tag.
         """
         area = assemble(Constant(1.0)*self.mesh.dx(tag))
         return area
@@ -346,7 +396,8 @@ class DataGenerator(ABC):
         Creates the edges of the mesh.
 
         Returns:
-            The edges of the mesh.
+            edges1 (numpy.ndarray): Source nodes of the edges.
+            edges2 (numpy.ndarray): Destination nodes of the edges.
         """
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
@@ -356,10 +407,12 @@ class DataGenerator(ABC):
     
     def edges_data(self):
         """
-        Calculates the data of the edges.
+        Stores the edges data in a dictionary.
 
-        Returns:
-            The data of the edges.
+        The data stored for each edge are the edge ID, the area of the face where the edge is located and the length of the edge.
+
+        Returns: 
+            The dictionary containing the edges data.
         """
         if not hasattr(self, 'NodesData'):
             self.nodes_data()
@@ -373,10 +426,12 @@ class DataGenerator(ABC):
 
     def nodes_data(self):
         """
-        Calculates the data of the nodes.
+        Stores the data of the nodes in a dictionary.
+
+        The data stored are the thermal conductivity, the node IDs, the inlet mask, the outlet mask and the length of the interface where the node is located.
 
         Returns:
-            The data of the nodes.
+            The dictionary containing the nodes data.
         """
         if not hasattr(self, 'center_line'):
             self.centerline()
@@ -396,21 +451,19 @@ class DataGenerator(ABC):
             it+=1
 
         self.NodesData = dict
+
         return dict
 
     @abstractmethod
     def td_nodes_data(self):
-        """
-        Abstract method to calculate the time-dependent data of the nodes.
-        """
         pass
 
     def centerline(self):
         """
-        Calculates the centerline coordinates of the mesh.
+        Computes the centerline coordinates of the mesh corresponding to the inlet, interfaces and outlet.
 
         Returns:
-            The centerline coordinates of the mesh.
+            A n x 2 numpy array with the centerline coordinates of the mesh, where n is the number of nodes.
         """
         center_line = np.zeros((self.NNodes,2)) # should be an array of arrays (commonly known as list of lists)
         tags_list = ['inlet','interface','outlet']
@@ -425,11 +478,11 @@ class DataGenerator(ABC):
                            coordinate = vertex.point().array()
                            edge_coord.append(coordinate)
                 edge_coord = np.stack(edge_coord, axis=0)
+
                 # Calculate the midpoint of the edge and append to the centerline list
                 center_line[it] = (np.max(edge_coord[:,0])+np.min(edge_coord[:,0]))/2,(np.max(edge_coord[:,1])+np.min(edge_coord[:,1]))/2
                 it+=1
         self.center_line = center_line
-        # self.NNodes = len(center_line)
         return center_line
 
     def save_graph(self, output_dir, model_type, fields_names):
@@ -464,17 +517,24 @@ class DataGenerator(ABC):
 
 class DataNS(DataGenerator):
     """
-    This class represents a data generator for solving the Navier-Stokes equations.
+    This class represents a data generator for a Stokes solver. 
     It inherits from the DataGenerator class.
+
+    Attributes:
+        solver (Solver): The solver object used for solving the Stokes equations.
+        mesh (Mesh): The mesh object representing the computational domain.
+        model_type (string): The type of model (stokes).
+        target_fields (string): The fields that will be predicted by the graph neural network (flowrate and pressure).
+        TDNodesData (dict): A dictionary containing the time-dependent data at each node.
     """
 
     def __init__(self, solver, mesh):
         """
         Constructor for the DataNS class.
 
-        Parameters:
-        - solver: The solver object used for solving the Navier-Stokes equations.
-        - mesh: The mesh object representing the computational domain.
+        Args:
+            solver (Solver): The solver object used to solve the Stokes equations.
+            mesh (Mesh): The mesh object representing the computational domain.
         """
         super().__init__(solver, mesh)
         self.model_type = "stokes"
@@ -482,14 +542,11 @@ class DataNS(DataGenerator):
 
     def flux(self,tag,u):
         """
-        Calculates the flux of a given variable across a specified tag.
+        Computes the flowrate at a given interface.
 
-        Parameters:
-        - tag: The tag representing the boundary or interface.
-        - u: The variable to calculate the flux for.
-
-        Returns:
-        - total_flux: The total flux of the variable across the tag.
+        Args:
+            tag: The tag representing the interface.
+            u: The velocity variable.
         """
         flux = dot(u, self.mesh.n('+'))*self.mesh.dS(tag)
         total_flux = assemble(flux)
@@ -497,29 +554,24 @@ class DataNS(DataGenerator):
 
     def inlet_flux(self,tag, u):
         """
-        Calculates the inlet flux of a given variable across a specified tag.
+        Computes the flowrate at the inlet.
 
-        Parameters:
-        - tag: The tag representing the inlet boundary.
-        - u: The variable to calculate the flux for.
-
-        Returns:
-        - total_flux: The total inlet flux of the variable across the tag.
+        Args:
+            tag: The tag representing the inlet.
+            u: The velocity variable.
         """
+
         flux = -dot(u, self.mesh.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
 
     def outlet_flux(self,tag, u):
         """
-        Calculates the outlet flux of a given variable across a specified tag.
+        Computes the flowrate at the outlet.
 
-        Parameters:
-        - tag: The tag representing the outlet boundary.
-        - u: The variable to calculate the flux for.
-
-        Returns:
-        - total_flux: The total outlet flux of the variable across the tag.
+        Args:
+            tag: The tag representing the outlet.
+            u: The velocity variable.
         """
         flux = dot(u, self.mesh.n)*self.mesh.ds(tag)
         total_flux = assemble(flux)
@@ -527,14 +579,11 @@ class DataNS(DataGenerator):
     
     def mean_pressure_interface(self,tag,p):
         """
-        Calculates the mean pressure across a specified interface.
+        Calculates the mean pressure on a specified interface.
 
-        Parameters:
-        - tag: The tag representing the interface.
-        - p: The pressure variable.
-
-        Returns:
-        - mean_p: The mean pressure across the interface.
+        Args:
+            tag: The tag representing the interface.
+            p: The pressure variable.
         """
         mean_p = p*self.mesh.dS(tag)
         length = assemble(Constant(1.0)*self.mesh.dS(tag))
@@ -543,14 +592,11 @@ class DataNS(DataGenerator):
 
     def mean_pressure_boundaries(self,tag,p):
         """
-        Calculates the mean pressure across a specified boundary.
+        Calculates the mean pressure on a specified boundary.
 
-        Parameters:
-        - tag: The tag representing the boundary.
-        - p: The pressure variable.
-
-        Returns:
-        - mean_p: The mean pressure across the boundary.
+        Args:
+            tag: The tag representing the boundary (inlet or outlet).
+            p: The pressure variable.
         """
         mean_p = p*self.mesh.ds(tag)
         length = assemble(Constant(1.0)*self.mesh.ds(tag))
@@ -559,11 +605,12 @@ class DataNS(DataGenerator):
             
     def td_nodes_data(self):
         """
-        Calculates the time-dependent data for the nodes.
+        Stores the time-dependent data in a dictionary.
+
+        The data stored are the flowrate and the pressure at each node and at each time step.
 
         Returns:
-        - td_dict_u: A dictionary containing the time-dependent data for the velocity.
-        - td_dict_p: A dictionary containing the time-dependent data for the pressure.
+            A dictionary containing the flowrate and a dictionary containing the pressure, both at each node and at each time step.
         """
         td_dict_u = dict()
         td_dict_p = dict()
@@ -589,14 +636,12 @@ class DataNS(DataGenerator):
 
     def save_graph(self, output_dir):
         """
-        Saves the graphs of specified fields.
+        Saves the graph in a specified directory.
 
-        Parameters:
-        - fields_names: A list of field names to save the graphs for. Default is ['flow_rate', 'pressure'].
-        - output_dir: The directory to save the graphs in. Default is "data/graphs/".
+        This function calls the save_graph method of the super class, passing the model_type and target_fields attributes.
 
-        Returns:
-        - The result of the super class's save_graph method.
+        Args:
+            output_dir: The directory to save the graph in.
         """
         return super().save_graph(output_dir,self.model_type,self.target_fields)
     
@@ -604,17 +649,24 @@ class DataNS(DataGenerator):
 # Define a subclass DataHeat that inherits from the DataGenerator abstract base class
 class DataHeat(DataGenerator):
     """
-    This class represents a data generator for solving heat transfer problems.
+    This class represents a data generator for a heat solver.
     It inherits from the DataGenerator class.
+
+    Attributes:
+        solver: The solver object for heat equation.
+        mesh: The mesh object representing the computational domain.
+        model_type (string): The type of model (heat).
+        fields_names (string): The fields that will be predicted by the graph neural network (flux).
+        TDNodesData (dict): A dictionary containing the time-dependent data at each node.
     """
 
     def __init__(self, solver, mesh):
         """
         Constructor for the DataHeat class.
 
-        Parameters:
-        - solver: The solver object for heat transfer equations.
-        - mesh: The mesh object representing the computational domain.
+        Args:
+            solver: The solver object used to solve the heat equation.
+            mesh: The mesh object representing the computational domain.
         """
         super().__init__(solver, mesh)
         self.model_type = "heat"
@@ -623,14 +675,14 @@ class DataHeat(DataGenerator):
     
     def flux(self, interface, u):
         """
-        Calculates the heat flux across an interface.
+        Calculates the heat flux at a specified interface.
 
-        Parameters:
-        - interface: The interface tag.
-        - u: The temperature field.
+        Args:
+            interface: The tag representing the interface.
+            u: The temperature field.
 
         Returns:
-        - total_flux: The total heat flux across the interface.
+            the heat flux at the specified interface.
         """
         flux = -self.solver.k * dot(grad(u)('+'), self.mesh.n('+')) * self.mesh.dS(interface)
         total_flux = assemble(flux)
@@ -638,25 +690,28 @@ class DataHeat(DataGenerator):
     
     def inlet_flux(self, tag, u):
         """
-        Calculates the heat flux at an inlet boundary.
+        Calculates the heat flux at the inlet.
 
-        Parameters:
-        - tag: The boundary tag.
-        - u: The temperature field.
+        Args:
+            tag: The tag representing the inlet.
+            u: The temperature field.
 
         Returns:
-        - total_flux: The total heat flux at the inlet boundary.
+            the heat flux at the inlet.
         """
+        
         flux = self.solver.k * dot(grad(u), self.mesh.n) * self.mesh.ds(tag)
         total_flux = assemble(flux)
         return total_flux
 
     def td_nodes_data(self):
         """
-        Calculates the time-dependent data for the nodes.
+        Stores the time-dependent data in a dictionary.
+
+        The data stored are the heat flux at each node and at each time step.
 
         Returns:
-        - td_dict: A dictionary containing the time-dependent data for the temperature.
+            A dictionary containing the heat flux at each node and at each time step.
         """
         td_dict = dict()
         for t in range(len(self.solver.ts)):
@@ -674,13 +729,11 @@ class DataHeat(DataGenerator):
     
     def save_graph(self, output_dir):
         """
-        Saves the graphs of specified fields.
+        Saves the graph in a specified directory.
 
-        Parameters:
-        - fields_names: A list of field names to save the graphs for. Default is ['flux'].
-        - output_dir: The directory to save the graphs in. Default is "data/graphs/".
+        This function calls the save_graph method of the super class, passing the model_type and fields_names attributes.
 
-        Returns:
-        - The result of the super class's save_graph method.
+        Args:
+            output_dir: The directory to save the graph in.
         """
         return super().save_graph(output_dir,self.model_type,self.fields_names)
