@@ -174,9 +174,6 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
             """
             batched_graph_c = copy.deepcopy(batched_graph)
             ns = batched_graph_c.ndata['next_steps']
-            # print('batched_graph', batched_graph.ndata['nfeatures'])
-            # print('ns', ns)
-
             loss_v = 0
             metric_v = 0
             mask = th.ones(ns[:,:,0:1].shape)
@@ -188,29 +185,21 @@ def evaluate_model(gnn_model, train_dataloader, test_dataloader, optimizer,
 
             # flow rate is known
             # mask[outmask,0] = mask[outmask,0] * bccoeff
-            #mask[outmask,1] = mask[outmask,1] * bccoeff
+            # mask[outmask,1] = mask[outmask,1] * bccoeff
             for istride in range(params['stride']):
-                # print('TRAINING')
+
                 nf = perform_timestep(gnn_model, params, batched_graph_c, ns, 
                                       istride)
 
 
                 batched_graph_c.ndata['nfeatures'][:,0:params['nout']] = nf
-                
-                # print(istride)
-                # print(nf)
 
                 # we follow https://arxiv.org/pdf/2206.07680.pdf for the
                 # coefficient
                 coeff = 0.5
                 if istride == 0:
                     coeff = 1  
-
-                #c_loss = th.tensor(0.0)
                     
-                # print('real', ns[:,:,istride])
-                # print('pred', nf)
-                #print('mask', mask)
                 loss_v = loss_v + coeff * mse(nf, ns[:,:,istride], mask=None)
                 metric_v = metric_v + coeff * mae(nf, ns[:,:,istride], mask=None)
 
@@ -322,15 +311,11 @@ def train_gnn_model(gnn_model, dataset, params, parallel, doprint = True):
         train_sampler = SubsetRandomSampler(th.arange(num_train))
         num_test = int(len(dataset['test']))
         test_sampler = SubsetRandomSampler(th.arange(num_test))
-
-    #print('index_map',dataset['train'].graphs[0].ndata['nfeatures'])
     
     train_dataloader = GraphDataLoader(dataset['train'], 
                                        sampler = train_sampler,
                                        batch_size = batch_size,
                                        drop_last = False)
-    
-    #print(train_dataloader.sampler)
     
     test_dataloader = GraphDataLoader(dataset['test'], 
                                       sampler = test_sampler,
@@ -602,7 +587,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -654,8 +639,6 @@ def training(parallel, rank = 0, graphs_folder = 'graphs_rm/',
 
     start = time.time()
     for _, dataset in enumerate(datasets):
-        # print('train', dataset['train'].graph_names)
-        # print('test',dataset['test'].graph_names)
         dataset['test'].graph_names.sort()
         params['train_split'] = dataset['train'].graph_names
         params['test_split'] = dataset['test'].graph_names
@@ -691,8 +674,11 @@ if __name__ == "__main__":
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features,
                 'target_features': target_features}
+    
+    graphs_folder = 'graphs_rm/'
+
     training(parallel, rank, 
-             graphs_folder = 'graphs_rm/', 
+             graphs_folder = graphs_folder, 
              types_to_keep = types_to_keep, 
              features = features)
     sys.exit()

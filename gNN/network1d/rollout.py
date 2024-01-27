@@ -77,14 +77,14 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
         params: dictionary of parameters
         graph: DGL graph
         bcs: 3D array containing the boundary conditions. 
-             dim 1: node index, dim 2: pressure (0) and flow rate (1),
+             dim 1: node index, dim 2: target features,
              dim 3: timesteps
         time index (int): index of timestep where we have to take the boundary
                           conditions from
         set_bcs (bool): set boundary conditions. Default -> True
     Returns:
         2D array where dim 1 corresponds to node indices, and dim 2 corresponds 
-            to pressure (0) and flow rate (1)
+            to target features
 
     """
 
@@ -93,10 +93,7 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
     if 'dirichlet' in params['bc_type']:
         set_boundary_conditions_dirichlet(gf, graph, params, bcs, time_index)
 
-    # print('graph', graph.ndata['nfeatures'])
-    # print('bcs', bcs)
     delta = gnn_model(graph)
-    # print('delta:', delta)
     gf[:,0:params['nout']] = gf[:,0:params['nout']] + delta
 
     if set_bcs:
@@ -107,15 +104,6 @@ def perform_timestep(gnn_model, params, graph, bcs, time_index, set_bcs = True):
             gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
             gf[graph.ndata['outlet_mask'].bool(), 1] = bcs[graph.ndata['outlet_mask'].bool(), 1, time_index]
 
-        # if 'dirichlet' in params['bc_type']:
-        #     set_boundary_conditions_dirichlet(gf, graph, params, bcs,
-        #                                       time_index)
-        # elif params['bc_type'] == 'Neumann':
-        #     #print(bcs.shape)
-        #     gf[graph.ndata['inlet_mask'].bool(), 0] = bcs[graph.ndata['inlet_mask'].bool(), 0, time_index]
-        #     gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
-            #gf[graph.ndata['outlet_mask'].bool(), 0] = bcs[graph.ndata['outlet_mask'].bool(), 0, time_index]
-            #print(gf[graph.ndata['inlet_mask'].bool(), 1],bcs[graph.ndata['inlet_mask'].bool(), 0, time_index] )
     return gf[:,0:params['nout']]
 
 def compute_average_branches(graph, flowrate):
@@ -147,9 +135,9 @@ def rollout(gnn_model, params, graph, average_branches = False):
 
     Returns:
         2D array of reconstructed features, where dim 1 corresponds to node 
-            indices and dim 2 corresponds to pressure (0) and flow rate (1),
-        2D array containing normalized pressure and flow rate relative errors
-        2D array containing pressure and flow rate relative errors
+            indices and dim 2 corresponds to target features,
+        2D array containing normalized target features relative errors
+        2D array containing target features relative errors
         2D array containing the difference of reconstructed and actual features
         Relative continuity loss
         Elapsed time in seconds
@@ -165,15 +153,11 @@ def rollout(gnn_model, params, graph, average_branches = False):
    
 
     r_features = graph.ndata['nfeatures'][:,0:params['nout']].unsqueeze(axis = 2).clone()
-    #print('tfc', tfc)
     start = time.time()
     for it in range(times-1):
         # set loading variable
-        #graph.ndata['nfeatures'][:,-1] = tfc[:,-1,it] # non capisco cosa fa
-        # print('ROLLOUT')
+        # graph.ndata['nfeatures'][:,-1] = tfc[:,-1,it] 
         gf = perform_timestep(gnn_model, params, graph, tfc, it + 1)
-        # print('gf', gf)
-        # print('real delta', tfc[:,0,it+1]- tfc[:,0,it])
         
         if average_branches:
             compute_average_branches(graph, gf[:,1])
@@ -188,42 +172,25 @@ def rollout(gnn_model, params, graph, average_branches = False):
     tfc = true_graph.ndata['nfeatures'][:,0:params['nout'],:].clone()
 
     rfc = r_features.clone()
-
-    # we only compute errors on branch nodes
-    # noi vogliamo calcolare gli errori su tutti i nodi ma così lo stai facendo solo su inlet??
-    # branch_mask = th.ones(graph.ndata['inlet_mask'].shape)
-    # branch_mask = th.reshape(branch_mask - graph.ndata['inlet_mask']*1,(-1,1,1))
-    # branch_mask = branch_mask.repeat(1,2,tfc.shape[2])
-    # # print('branch_mask', branch_mask)
-    # # compute error
-    # tfc = tfc * branch_mask
-    # rfc = rfc * branch_mask
     diff = tfc - rfc
 
     errs = th.sum(th.sum(diff**2, dim = 0), dim = 1)
     errs = errs / th.sum(th.sum(tfc**2, dim = 0), dim = 1)
     errs_normalized = th.sqrt(errs)
 
-    tfc[:,0,:] = nz.invert_normalize(tfc[:,0,:], 'flux', 
-                                     params['statistics'], 'labels')
-    # tfc[:,1,:] = nz.invert_normalize(tfc[:,1,:], 'dt', 
-    #                                  params['statistics'], 'features')
+    
+    for idx, label in enumerate(params['target']):
+        tfc[:,idx,:] = nz.invert_normalize(tfc[:,idx,:], label, 
+                                        params['statistics'], 'labels')
 
-    rfc[:,0,:] = nz.invert_normalize(rfc[:,0,:], 'flux', 
-                                     params['statistics'], 'labels')
-    if params['nout'] == 2:
-        tfc[:,1,:] = nz.invert_normalize(tfc[:,1,:], 'pressure', 
-                                     params['statistics'], 'labels')
-        rfc[:,1,:] = nz.invert_normalize(rfc[:,1,:], 'pressure', 
-                                         params['statistics'], 'labels')
-    # rfc[:,1,:] = nz.invert_normalize(rfc[:,1,:], 'dt', 
-    #                                  params['statistics'], 'features')
+        rfc[:,idx,:] = nz.invert_normalize(rfc[:,idx,:], label, 
+                                        params['statistics'], 'labels')
 
     diff = tfc - rfc
     errs = th.sum(th.sum(diff**2, dim = 0), dim = 1)
     errs = errs / th.sum(th.sum(tfc**2, dim = 0), dim = 1)
     errs = th.sqrt(errs)
-    return r_features.detach().numpy(), errs_normalized.detach().numpy(), \
+    return rfc.detach().numpy(), errs_normalized.detach().numpy(), \
            errs.detach().numpy(), np.abs(diff.detach().numpy()), end - start
 
     

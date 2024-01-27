@@ -79,7 +79,6 @@ class Dataset(DGLDataset):
         offset = 0
         ngraphs = len(self.times)
         stride = self.params['stride']
-        # print(self.total_times,stride,ngraphs)
         self.index_map = np.zeros((self.total_times - stride * ngraphs, 2))
         
         for t in self.times:
@@ -145,7 +144,6 @@ class Dataset(DGLDataset):
         itime = indices[1]
 
         features = self.graphs[igraph].ndata['nfeatures'].clone()
-        #print(features)
         nf = features[:,:,itime].clone()
         nfsize = nf[:,:self.params['nout']].shape
         dt = self.graphs[igraph].ndata['dt'][0]
@@ -233,7 +231,6 @@ def split(graphs, divs, dataset_info):
 
     names = [graph_name for graph_name in graphs]
     # we do this to keep sims with the same last number in the same group
-    # forse a noi non serve questa cosa non mi ricordo cosa vuol dire l'ultimo numero 
     dictnames = dict()
     for name in names:
         simname = name.split('.')[0] + '.' + name.split('.')[1]
@@ -262,7 +259,6 @@ def split(graphs, divs, dataset_info):
     subsets = dict()
     for sublist_n, sublist_v in sublists.items():
         subsets[sublist_n] = list(chunks(sublist_v, divs))
-        # print('subset',sublist_n, len(subsets[sublist_n][0]))
         nsets = len(subsets[sublist_n])
         # we distribute the last sets among the first n-1
         if nsets != divs:
@@ -284,7 +280,6 @@ def split(graphs, divs, dataset_info):
         subsets_graph_names[subset_n] = list_all
 
     subsets = subsets_graph_names
-    # print(subsets['heat_eq'][0])
     datasets = []
 
     if divs == 1:

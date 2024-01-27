@@ -61,7 +61,6 @@ def normalize(field, field_name, statistics, norm_dict_label):
         else:
             field = field * 0
     elif statistics['normalization_type'][norm_dict_label] == 'none':
-        print('non normalizzo')
         pass
     else:
         raise Exception('Normalization type not implemented')
@@ -154,8 +153,8 @@ def compute_statistics(graphs, fields, statistics):
                     graph = graphs[graph_n]
                     if etype == 'node':
                         d = graph.ndata[field_name]
-                    # elif etype == 'edge':
-                    #     d = graph.edata[field_name]
+                    elif etype == 'edge':
+                        d = graph.edata[field_name]
                     # elif etype == 'outlet_node':
                     #     mask = graph.ndata['outlet_mask'].bool()
                     #     d = graph.ndata[field_name][mask]
@@ -244,7 +243,7 @@ def normalize_graphs(graphs, fields, statistics, norm_dict_label):
                                                             statistics,
                                                             norm_dict_label)
 
-def add_features(graphs, target_features=None, nodes_features = None, edges_features = None):
+def add_features(graphs, target_features, nodes_features = None, edges_features = None):
     """
     Add features to graphs.
 
@@ -260,7 +259,6 @@ def add_features(graphs, target_features=None, nodes_features = None, edges_feat
 
     """
     if nodes_features == None:
-        # pressure and flowrate are always included
         nodes_features = [
             'k',
             'T',
@@ -272,70 +270,24 @@ def add_features(graphs, target_features=None, nodes_features = None, edges_feat
 
     for graph_n in tqdm(graphs, desc = 'Add features', colour='green'):
         graph = graphs[graph_n]
-        ntimes = graph.ndata['flux'].shape[2]
+        ntimes = graph.ndata[target_features[0]].shape[2]
 
         cf = []
 
         def add_feature(tensor, desired_features, label):
             if label in desired_features:
                 cf.append(tensor)
-
-        # graph.ndata['dt'].repeat(1, 1, ntimes)
-        # add_feature(graph.ndata['dt'].repeat(1, 1, ntimes), 
-        #             nodes_features, 
-        #             'dt')
-        # print(cf)
         
         for label in target_features:
                 add_feature(graph.ndata[label].clone(), target_features, label)
         for label in nodes_features:
             add_feature(graph.ndata[label].repeat(1,1,ntimes),nodes_features,label)
-        # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
-        #             nodes_features, 
-        #             'interface_length')
-        # add_feature(graph.ndata['k'].repeat(1, 1, ntimes), 
-        #             nodes_features, 
-        #             'k')
-    
-        #print('flux',graph.ndata['flux'])
-        # add_feature(graph.ndata['interface_length'].repeat(1, 1, ntimes), 
-        #             nodes_features, 
-        #             'interface_length')
-        
-        # f = graph.ndata['flux'].clone()
-        
-        # add_feature(th.ones(f.shape[0],1,ntimes) * th.min(f), 
-        #             nodes_features, 
-        #             'dip')
-        # add_feature(th.ones(f.shape[0],1,ntimes) * th.max(f), 
-        #             nodes_features, 
-        #             'sysp')
-        # questo non serve stai aggiungendo loading 2 volte
-        # add_feature(th.zeros(f.shape[0],1,ntimes), 
-        #             nodes_features, 
-        #             'loading')
+
         outmask = graph.ndata['outlet_mask'].bool()
         nnodes = outmask.shape[0]
 
-        # r1 = th.zeros((nnodes,1,ntimes))
-        # c = th.zeros((nnodes,1,ntimes))
-        # r2 = th.zeros((nnodes,1,ntimes))
-        # r1[outmask,0,:] = graph.ndata['resistance1'][outmask,0,:]
-        # c[outmask,0,:] = graph.ndata['capacitance'][outmask,0,:]
-        # r2[outmask,0,:] = graph.ndata['resistance2'][outmask,0,:]
-        # add_feature(r1, nodes_features, 'resistance1')
-        # add_feature(c, nodes_features, 'capacitance')
-        # add_feature(r2, nodes_features, 'resistance2')
-
         cfeatures = th.cat(cf, axis = 1)
         graph.ndata['nfeatures'] = cfeatures
-
-        # if 'loading' in nodes_features:
-        #     loading = graph.ndata['loading']
-        #     graph.ndata['nfeatures'] = th.cat((f, cfeatures, loading), 
-        #                                        axis = 1)
-        # else:
-        #     graph.ndata['nfeatures'] = th.cat((f, cfeatures), axis = 1)
 
         cf = []
         add_feature(graph.edata['area'], edges_features, 'area')
@@ -435,7 +387,7 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
         Dictionary of parameters
 
     """
-    fields_to_normalize = {'node': ['flux'], 'edge': [], 'outlet_node': []}
+    fields_to_normalize = {'node': features['target_features'], 'edge': []}
     docompute_statistics = True
     if statistics != None:
         docompute_statistics = False
@@ -478,6 +430,7 @@ def generate_normalized_graphs(input_dir, norm_type, bc_type,
         normalize_graphs(graphs, {'node' : ['d'+label]}, statistics, 'labels')
     params = {'bc_type': bc_type}
     params['statistics'] = statistics
+    params['target'] = features['target_features']
     if features == None:
         add_features(graphs)
     else:

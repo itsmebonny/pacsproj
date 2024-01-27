@@ -47,11 +47,9 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
         params: dictionary of parameters
         doplot: if True, the functions creates and saves one video per simulation. Default -> False
     Returns:
-        2D array containing average pressure and flow rate normalized errors
-        2D array containing average pressure and flow rate errors, 
+        array containing average flux normalized errors
+        array containing average flux rate errors, 
         Average continuity loss
-        Average run time
-        Average number of timesteps
 
     """
     print('==========' + split_name + '==========')
@@ -77,7 +75,7 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
         print('Errors')
         print(errs)
         #if doplot:
-            #plot_rollout(r_features, dataset.graphs[i], params, fdr)ù
+            #plot_rollout(r_features, dataset.graphs[i], params, fdr)
         tot_errs_normalized = tot_errs_normalized + errs_normalized
         tot_errs = tot_errs + errs
 
@@ -85,11 +83,11 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     print('Global statistics')
     print('Errors')
     print(tot_errs / N)
-    print('Average time = {:.2f}'.format(total_time / N))
-    print('Average n timesteps = {:.2f}'.format(total_timesteps / N))
+    # print('Average time = {:.2f}'.format(total_time / N))
+    # print('Average n timesteps = {:.2f}'.format(total_timesteps / N))
 
-    return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N, \
-           total_time / N, total_timesteps / N
+    return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N
+        #    total_time / N, total_timesteps / N
 
 def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm/', 
                        data_location = 'data/'):
@@ -165,36 +163,62 @@ def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'dat
     return dataset, gnn_model, params
 
 def plot_predictions(dataset, split_name, gnn_model, params, graph_idx=-1):
+    """
+    Plot predictions of a saved model for a given graph in the dataset.
 
-    # np.random.seed(50)
+    Arguments:
+        dataset: dictionary containing two keys, 'train' and 'test', with
+                 the different datasets
+        split_name (string): either 'train' or 'test'
+        gnn_model: the GNN
+        params: dictionary of parameters
+        graph_idx (int): index of graph to plot. If -1, a random graph is
+                         chosen. 
+                         Default -> -1
+    Returns:
+        Rollout error
+    """ 
+
     dataset = dataset[split_name]
     N = len(dataset.graphs)
     if graph_idx == -1 or graph_idx >= N:
         graph_n = np.random.uniform(0,N, 1).astype(int)[0]
     graph_n = graph_idx
     k = dataset.graphs[graph_n].ndata['k'][0][0][0]
-    r_features, errs_normalized, \
+    rfc, errs_normalized, \
         errs, _, _ = rollout(gnn_model, params, dataset.graphs[graph_n])
-    r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params['statistics'], 'labels')
-    dataset.graphs[graph_n].ndata['nfeatures'][:,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][:,0,:],'flux', params['statistics'], 'labels')
+    # r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params['statistics'], 'labels')
+    true_data =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][:,0,:],'flux', params['statistics'], 'labels')
 
     print('k = ', k)
     for node in range(1,4):
-        # r_features[node,0,:] = gng.invert_normalize(r_features[node,0,:],'flux', params['statistics'], 'labels')
-        plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
-        # dataset.graphs[graph_n].ndata['nfeatures'][node,0,:] =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:],'flux', params['statistics'], 'labels')
-        plt.plot(dataset.graphs[graph_n].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
+        plt.plot(rfc[node,0,:], label = 'pred', linewidth = 3)
+        plt.plot(true_data[node,:], label = 'real', linewidth = 3, linestyle = '--')
         plt.legend(['prediction', 'real'])
         plt.xlabel('time steps')
         plt.ylabel('heat flux')
         plt.title('node ' + str(node))
         plt.show()
 
-    print(errs_normalized)
-
-    return errs_normalized
+    return errs
 
 def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new/', data_location = 'data/'):
+    """
+    Test a saved model on new graphs.
+
+    Arguments:
+        path (string): path to the GNN model folder
+        graph_name (string): name of the graph file to test on
+        graphs_folder: name of folder containing graphs
+        data_location (string): location of the 'gROM_data' folder. If None, 
+                                we take the default location (which must be 
+                                specified in data_location.txt).
+                                Default -> None
+
+    Returns:
+        Rollout error
+
+    """
     
     gnn_params = json.load(open(path + '/parameters.json'))
 
@@ -218,22 +242,21 @@ def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new/', data_locati
     
     params2['nout'] = gnn_params['nout']
     
-    r_features, errs_normalized, \
+    rfc, errs_normalized, \
             errs, diff, elaps = rollout(gnn_model, params2, graphs[graph_name])
-    r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params['statistics'], 'labels')
-    graphs[graph_name].ndata['nfeatures'][:,0,:] =gng.invert_normalize(graphs[graph_name].ndata['nfeatures'][:,0,:],'flux', params['statistics'], 'labels')
+    # r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params2['statistics'], 'labels')
+    true_data =gng.invert_normalize(graphs[graph_name].ndata['nfeatures'][:,0,:],'flux', params2['statistics'], 'labels')
     
     for node in range(1,4):
-        plt.plot(r_features[node,0,:], label = 'pred', linewidth = 3)
-        plt.plot(graphs[graph_name].ndata['nfeatures'][node,0,:], label = 'real', linewidth = 3, linestyle = '--')
+        plt.plot(rfc[node,0,:], label = 'pred', linewidth = 3)
+        plt.plot(true_data[node,:], label = 'real', linewidth = 3, linestyle = '--')
         plt.legend(['prediction', 'real'])
         plt.xlabel('time steps')
         plt.ylabel('heat flux')
-        plt.title('node ' + str(node))
+        plt.title(f'node {node}')
         plt.show()
-    print(errs_normalized)
 
-    return errs_normalized
+    return errs
 
 """
 This function expects the location of a saved model folder as command line
@@ -248,7 +271,6 @@ if __name__ == '__main__':
     if os.path.exists('results'):
         shutil.rmtree('results')
 
-    # plot_predictions(dataset, 'test', gnn_model, params, graph_idx=-1)
-    # evaluate_all_models(dataset, 'train', gnn_model, params)
-    # evaluate_all_models(dataset, 'test', gnn_model, params, True)
-    test_new_graphs(path, 'k_67.44.grph')
+    evaluate_all_models(dataset, 'train', gnn_model, params)
+    evaluate_all_models(dataset, 'test', gnn_model, params, True)
+    
