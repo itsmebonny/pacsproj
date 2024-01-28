@@ -137,7 +137,7 @@
 %-----------------------------------------------------------------------------
 
 \section{Introduction}
-Full 3D blood flow models are important in the study of cardiovascular system since they allow one to extract detailed quantities of interest, but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this field because of their efficiency. An example is presented in \cite{Luca}, where a one-dimensional reduced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider the heat equation as test case, but the goal of the project is to show the potential extension of this approach to solve more difficult problems with complex geometries such as the simulations of proteins spreading in the neural system, which are at the basis of neurodegenerative diseases \cite{MattiaCorti}. The main part of this project is the implementation of a library for data generation used to train the graph neural network and the adaptation of the code\footnote{The code can be found \href{https://github.com/StanfordCBCL/gROM}{here}.} used in the paper\cite{Luca} to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
+Full 3D blood flow models are important in the study of the cardiovascular system since they allow one to extract detailed quantities of interest, but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this field because of their efficiency. An example is presented in \cite{Luca}, where a one-dimensional reduced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider the heat equation as test case, but the goal of the project is to show the potential extension of this approach to solve more difficult problems with complex geometries such as the simulations of proteins spreading in the neural system, which are at the basis of neurodegenerative diseases \cite{MattiaCorti}. The main part of this project is the implementation of a library for data generation used to train the graph neural network, and the adaptation of the code\footnote{The code can be found \href{https://github.com/StanfordCBCL/gROM}{here}.} used in the paper\cite{Luca} to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
 
 %-----------------------------------------------------------------------------
 % Problem
@@ -148,14 +148,15 @@ Full 3D blood flow models are important in the study of cardiovascular system si
 % descrizione del problema generico Lu=F risolto con Fenics
 We consider a general time-dependent variational problem of the form:
 \[Lu=f\]
-with \(L\) a linear operator, \(f\) a source term and \(u\) the solution. Given a specific geometry \(\Omega\) and using the finite element method implemented in FEniCS, we can solve this problem and obtain the solution \(u^{n}\) at each time step \(n\). From this, we can generate a graph that describes the geometry of the problem and the solution, storing some values of interest as features of the nodes and the edges.By solving the problem for different geometries and different values of the parameters(e.g. the diffusivity constant) we can generate a dataset that will be used to train the graph neural network. 
+with \(L\) a linear operator, \(f\) a source term and \(u\) the solution. Given a specific geometry \(\Omega\) and using the finite element method implemented in FEniCS, we can solve this problem and obtain the solution \(u^{n}\) at each time step \(n\). From this, we can generate a graph that describes the geometry of the problem and the solution, storing some values of interest as features of the nodes and the edges. By solving the problem for different geometries and different values of the parameters (e.g. the diffusivity constant) we can generate a dataset that will be used to train the graph neural network. 
 
-The graph neural network used in this project is the one presented in \cite{Luca}, which is an adaptation of the MeshGraphNet implementation \cite{MeshGraphNet}, which we modified to make it suitable for our test case and extendable to other problems.
-The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features at that time step, and it predicts an update for the state variables. The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
+The graph neural network used in this project is the one presented in \cite{Luca}, which is an adaptation of the MeshGraphNet implementation \cite{MeshGraphNet}, and that we modified to make it suitable for our test case and extendable to other problems.
+
+The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features at that time step, and it predicts an update for the state variables (rollout phase). The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
 A forward step of the GNN is composed by three stages:
 \begin{enumerate}
     \item Encode: a latent representation of the node and edge features is computed using a fully connected neural network.
-    \item Process: the process stage is composed by L identical blocks, each of them is applied in sequence to the output of the previous blocs, updating the node and edge features. 
+    \item Process: the process stage is composed by L identical blocks, each of them is applied in sequence to the output of the previous blocks, updating the node and edge features. 
     \item Decode: using a fully connected neural network, the node features are transformed from the latent space to the output space. The output of the GNN is a vector containing the update of the state variables \(\delta\Theta^n\) at each node of the graph. 
 \end{enumerate}
 After this forward step, the state variables can be updated as \(\Theta^{n+1} = \Theta^{n} + \delta\Theta^{n}\).
@@ -174,7 +175,15 @@ where \(\mathcal{T}\) is the set of graphs used for training and \(sMSE\) is the
 In the above equation, \(a_l=1\) if \(l=1\) and \(a_l=0.5\) otherwise, \(\hat{\Theta}^{k+l,g}\) is the exact value of the nodal state variable at time step \(k+l\) of the \(g\)-th graph, and \(\Phi_l(\Theta^{k,g}|_i)\) is the approximation of \(\Theta\) at node \(i\) after \(l\) application of the GNN. 
 The loss function is optimized using the Adam optimizer.
 
-During the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise.
+During the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise. 
+
+It is important to make the graph neural network robust for rollouts of many time steps, since the error generated by the predictions is propagated at each time step. 
+For this reason, in addition to the loss function, to evaluate the performance of the network we compute also the rollout error, which is defined as: 
+
+\begin{equation}
+    e^g = \frac{ \sum_{i=1}^{N^g} \sum_{k=11}^{M^g} (\hat{\Theta}_i^{k,g} -  \Phi_l(\Theta^{k,g}|_i))^2 }{ \sum_{i=1}^{N_g} \sum_{k=1}^{M^g} (\hat{\Theta}_i^{k,g})^2 }.
+\end{equation}
+
 
 \subsection{Test case: heat equation}
 \label{testcase}
@@ -189,8 +198,14 @@ The mathematical formulation of the problem is the following:
         \cup \partial \Omega_{walls}.
     \end{cases}
 \end{equation}
-where \(u\) is the temperature, \(k\) is the diffusivity constant, \(h\) is the Neumann condition at the inlet boundary. As domain \(\Omega\) we consider different geometries such as the one shown in Figure (?): the 2D mesh is composed of 4 trapezoids where the interface between them have different lengths.
-% aggiungere figura di una mesh 
+where \(u\) is the temperature, \(k\) is the diffusivity constant, \(h\) is the Neumann condition at the inlet boundary. As domain \(\Omega\) we consider different geometries such as the one shown in Figure \ref{mesh}: the 2D mesh is composed of 4 trapezoids where the interface between them have different lengths. The inlet boundary is the left one, while the outlet boundary is the right one. The other two boundaries are the walls.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{Images/mesh.png}
+    \caption{Example of a mesh used in the test case.}
+    \label{mesh}
+\end{figure}
 
 We generated 20 different mesh using gmsh. 
 Then we solved the problem in FEniCS using Discontinuous Galerkin method and implicit Euler for time discretization, imposing as Neumann condition at inlet \(h = 2e^{-(t-2.5)^2}\).
@@ -198,7 +213,7 @@ From these solutions we generated a dataset of 277 graphs.
 Each graph has 5 nodes: an inlet node, an outlet node and 3 nodes in correspondence of the interfaces. 
 As descriptor of the state of the system we consider the heat flux at each time step, which is computed as the integral of the normal derivative of the temperature on the interface. The other node features are the thermal diffusivity \(k\), the interface length and the nodal type (inlet, outlet or branch node). 
 As edge features we consider the area of the corresponding trapezoid and the distance between the nodes connected by the edge. 
-The graph neural newtork is trained for 100 epochs on this dataset, a list of the hyperparameters used is shown in Table \ref{hyperparams}. To more details about the hyperparameters and the network architecture we refer to Section \ref{gnn}.
+The graph neural newtork is trained for 300 epochs on this dataset, a list of the hyperparameters used is shown in Table \ref{hyperparams}. To more details about the hyperparameters and the network architecture we refer to Section \ref{gnn}.
 
 \begin{table}[H]
     \centering
@@ -228,7 +243,17 @@ The graph neural newtork is trained for 100 epochs on this dataset, a list of th
 
 \section{Code}
 
-% qui farei un'introduzione su cosa si trova nella nostra repositery ma prima dobbiamo sistemarla 
+The implementation of this work is in Python. The mesh generation is done using \texttt{gmsh}, while the variational problem is solved using \texttt{FEniCS}. The graph neural network is implemented using \texttt{PyTorch}. The code is available on GitHub\footnote{The repository can be found}. %\href{mettere il link}}.
+
+The folders and files in the repository are organized as follows:
+
+\begin{itemize}
+    \item \textbf{scripts} This folder contains the scripts with all the classes and functions necessary to create the meshes, solve the variational problem and generate the graphs. 
+    \item \textbf{gNN} This folder contains the code of the graph neural network.
+    \item \textbf{notebooks} This folder contains the jupyter notebooks that can be run to generate the dataset and to test the GNN.
+    \item \textbf{models} This folder contains the trained models.
+    \item \textbf{README.md} This file contains a brief description of the repository and the instructions to run the code.
+\end{itemize}
 
 \subsection{Mesh creation}
 

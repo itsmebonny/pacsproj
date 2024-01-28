@@ -500,7 +500,7 @@ def parse_command_line_arguments():
 
     parser.add_argument('--bs', help='batch size', type=int, default=32)
     parser.add_argument('--epochs', help='total number of epochs', type=int,
-                        default=500)
+                        default=300)
     parser.add_argument('--lr_decay', help='learning rate decay', type=float,
                         default=0.001)
     parser.add_argument('--lr', help='learning rate', type=float, default=0.01)
@@ -511,7 +511,7 @@ def parse_command_line_arguments():
     parser.add_argument('--weight_decay', help='l2 regularization', 
                         type=float, default=1e-5)
     parser.add_argument('--ls_gnn', help='latent size gnn', type=int,
-                        default=16)
+                        default=8)
     parser.add_argument('--ls_mlp', help='latent size mlps', type=int,
                         default=16)
     parser.add_argument('--process_iterations', help='gnn layers', type=int,
@@ -587,7 +587,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
