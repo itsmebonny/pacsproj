@@ -187,6 +187,7 @@ For this reason, in addition to the loss function, to evaluate the performance o
 
 \begin{equation}
     e^g = \frac{ \sum_{i=1}^{N^g} \sum_{k=11}^{M^g} (\hat{\Theta}_i^{k,g} -  \Phi_l(\Theta^{k,g}|_i))^2 }{ \sum_{i=1}^{N_g} \sum_{k=1}^{M^g} (\hat{\Theta}_i^{k,g})^2 }.
+    \label{rollout}
 \end{equation}
 
 
@@ -403,6 +404,8 @@ All this function are invoked by the \texttt{save\_graph} method of the \texttt{
 \subsection{Graph Neural Network}
 \label{gnn}
 
+In this section we describe the code of the graph neural network, located in the \texttt{gNN} folder. Since the code was already implemented and we just made some modifications, we will not describe it in detail, but we will focus on the changes we made and on the more relevant parts of the code, which are inside the \texttt{network1D} folder.
+
 \subsubsection*{Code Structure}
 To better understand the behavior of the network, it is necessary to look at its inner mechanisms. 
 Starting from the \texttt{MLP} class, we can see that it is a simple multi-layer perceptron, with a number of hidden layers specified by the input parameter \texttt{n\_h\_layers}. This is the basic mechanism of all the network, every time that we want to process a node or an edge, we use an \texttt{MLP} to do so. 
@@ -432,7 +435,7 @@ Here we describe the training process more in detail. The process is done using 
 
 The training of the network starts with the definition of its hyperparameters described in Table \ref{hyperparams_description}. In particular, the first four parameters are the ones that define the network architecture, as explained in the previous section. The \texttt{rate\_noise} and \texttt{rate\_noise\_features} parameters are related to the noise that is added to the system state during the training process, to make the model more robust. The parameters listed in this table are the one from the original implementation, but we added some more to make the network more flexible, specifically a \texttt{n\_nout} parameter that defines the number of outputs of the network (and it must be equal to the number of target features) and a \texttt{bc\_type} which is a string that defines the type of boundary condition that has to be imposed (e.g. 'heat' in our test case).
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \begin{tabular}{|l|l|}
 \hline
@@ -466,45 +469,70 @@ While the original implementation was meant to work only with blood flow data, w
     \item We modified the \texttt{training.py} file to make it able to take as input the number of outputs needed by the network. In this way we have completely generalized our library to be able to receive as input any suitable dataset.
 \end{itemize}
 
-With these modifications, the network is able to predicit a variable number of QoI, which have to be specified by the user in the \texttt{main} function of the \texttt{training.py} file, in a list called \texttt{target\_features}. 
-The limitation that persist despite of out changes, is the imposition of the boundary conditions. In fact, the network is able to impose only two types of boundary conditions that we called 'heat' and 'stokes', accordingly to the type of problem that we are solving in this work. Particularly, the 'heat' boundary condition that we used in the test case imposes the exact heat flux at the inlet node (Neumann boundary condition) and the zero heat flux at the outlet node (homogeneous Neumann boundary condition). If a new problem is considered, the user has to modify the \texttt{perform\_timestep} function in the \texttt{rollout.py} file in order to impose the correct boundary conditions.
+With these modifications, the network is able to predict a variable number of QoI, which have to be specified by the user in the \texttt{main} function of the \texttt{training.py} file, in a list called \texttt{target\_features}. 
+The limitation that persists despite of out changes, is the imposition of the boundary conditions. In fact, the network is able to impose only two types of boundary conditions that we called 'heat' and 'stokes', accordingly to the type of problems that we are solving in this work. Specifically, the 'heat' boundary condition that we used in the test case imposes the exact heat flux at the inlet node (Neumann boundary condition) and the zero heat flux at the outlet node (homogeneous Neumann boundary condition). If a new problem is considered, the user has to modify the \texttt{perform\_timestep} function in the \texttt{rollout.py} file in order to impose the correct boundary conditions.
     
-\subsection*{Tester}
+\subsubsection*{Tester}
 The \texttt{tester.py} file is used to test the trained model on graphs from the training and test set and on new graphs. The file is composed of the following already implemented functions: 
 \begin{itemize}
     \item \texttt{get\_dataset\_and\_gnn}: loads the dataset and the trained GNN given a path to a saved model folder
-    \item \texttt{get\_gnn\_and\_graphs}: loads th trained GNN and the graphs given a path to a saved model folder
-    \item \texttt{evaluate\_all\_method}: computes the rollout phase for all the graphs in the dataset ('train' or 'test' is specified by the user), given a trained model. 
+    \item \texttt{get\_gnn\_and\_graphs}: loads the trained GNN and the graphs given a path to a saved model folder
+    \item \texttt{evaluate\_all\_method}: computes the rollout phase for all the graphs in the dataset ('train' or 'test' is specified by the user), given a trained model. This function returns the average rollout error. 
 \end{itemize}
 
 In this file, we implemented two additional functions:
 \begin{itemize}
-    \item \texttt{plot\_predictions(dataset, split\_name, gnn\_model, params, graph\_idx=-1)}: it computes the rollout phase for a single graph and plots the model's predictions and the real data given a trained model and the dataset on which it was trained. It takes as input the dataset, the name of the split ('train' or 'test'), the trained model, the parameters of the model and the index of the graph to plot. If the index is not specified, the graph is randomly chosen. The function returns the nomalized error between the model's predictions and the real data.
-    \item \texttt{evaluate\_new\_graph(path, graph\_name, graphs\_folder, data\_location)}: it computes the rollout phase and it plots the model's predictions and the real data for a new graph given a trained model. It takes as input the path to the model folder, the name of the graph to evaluate, the folder where the graph is stored and the path to the folder where the data are stored. As above, the function returns the normalized error of the rollout phase. Inside this method, the function \texttt{generate\_normalized\_graph} is called since we need to store the new graph features in order to evaluate the model.
+    \item \texttt{plot\_predictions(dataset, split\_name, gnn\_model, params, graph\_idx=-1)}: it computes the rollout phase for a single graph and it plots the model's predictions compared to the real data, given a trained model and the dataset on which it was trained.
+    It takes as input the dataset, the name of the split ('train' or 'test'), the trained model, the parameters of the model and the index of the graph to plot. If the index is not specified, the graph is randomly chosen. The function returns the nomalized error between the model's predictions and the real data.
+    \item \texttt{evaluate\_new\_graph(path, graph\_name, graphs\_folder, data\_location)}: it computes the rollout phase and it plots the model's predictions and the real data for a new graph given a trained model. It takes as input the path to the model folder, the name of the graph to evaluate, the folder where the graph is stored and the path to the folder where the data are stored. As above, the function returns the average error of the rollout phase. Inside this method, the function \texttt{generate\_normalized\_graph} is called since we need to store the new graph features in order to evaluate the model.
 \end{itemize}
 
-\section{Running istructions}
+\subsection{Notebooks}
+To conclude the description of the code, we briefly explain the content of the notebooks in the \texttt{notebooks} folder. 
 
+Firstly, there is the \texttt{HeatDatasetGen.ipynb} notebook, which is used to generate a dataset based on the Heat equation, as our test case. Inside this notebook, a random mesh is loaded from a given folder and the variational problem is solved using the \texttt{Heat} class, given a random diffusivity constant and the other parameters of the problem. Then, a graph is generated using the \texttt{DataHeat} class and it is saved in output directory. This process is repeated for a given number of times, in order to generate a dataset of graphs. Finally, the json file containing the information about the dataset is generated and saved in the same output directory. 
+
+% Stokes notebook dobbiamo decidere se metterlo e cosa scriverci
+
+Then, there is the \texttt{ModelTester.ipynb} which can be used to evaluate a trained model. In this notebook, it is necessary to specify the path to the model folder and the path to the proper dataset folder. In this way, the model and the dataser are both loaded and it is possible to visualize the predictions of the model on the graphs of the dataset and on new graphs from a different folder. It is also possible to display the average rollout errors on the train and test sets. All of this is done using the functions implemented in the \texttt{tester.py} file.
+
+\section{Running instructions}
+
+To run the code and reproduce the results presented in Section \ref{results}, it necessary to run the \texttt{ModelTester.ipynb} notebook. The path to our trained model and to the dataset that we used are already specified in the notebook, so it is not necessary to change them. It is possible to plot the predictions of the model on different graphs from the training and the test set just changing the index of the graph to plot. Then, the model's predictions on new graphs can be plotted just specifying the filename of a new graph and the folder where it is stored, some examples that can be tested are already specified in the notebook. 
+
+Another possibility is to generate new meshes and new graphs, using the \texttt{MeshUtils.py} file and the \texttt{HeatDatasetGen.ipynb} notebook. 
+First of all, new meshes can be created running the \texttt{main} function of the \texttt{MeshUtils.py} file from command-line. All the parameters that can be modified are listed in Table \ref{args} and they can be specified as command-line arguments. The directory where the meshes are saved and the mesh names can be modified in the \texttt{main} function. 
+Then, the \texttt{HeatDatasetGen.ipynb} notebook can be used to generate a new dataset of graphs. It is necessary to specify the path to the folder containing the meshes, the path to the folder where the graphs have to be saved and the number of graphs to generate. Also, all the parameters of the variational problem can be modified in the notebook. 
+Following these instructions, it is possible to evaluate the trained model on the new graphs generated using the \texttt{ModelTester.ipynb} notebook and specifying the name of the new graphs folder and the name of the graph to evaluate. Notice that it is necessary that the new graphs directory is inside the \texttt{data} folder.
+
+For more details about the running instructions, to know about the packages required and for the training instructions, please refer to the README file in the repository.
 
 %-----------------------------------------------------------------------------
 % Results
 %--- --------------------------------------------------------------------------
 
 \section{Results}
-
+\label{results}
 In this section we show the results on the test case described in the section \ref{testcase}. 
-In Figure \ref{loss} the performance of the model is shown in terms of loss, metric and rollout error during the training. 
+In Figure \ref{loss} the performance of the model is shown in terms of loss and metric during the training. 
 The loss function considered is the one defined in equation \ref{mse}, while the metric is the mean absolute error between the model's predictions and the real data. 
-The rollout error is computed as the mean squared error between the model's predictions and the real data during the rollout phase of a graph randomly selected in the dataset. 
-In Table \ref{errors} we show the final average rollout errors on the training and the test set. 
+Moreover, the rollout error's behavior is shown in Figure \ref{rollout_plot} and it is computed as in Equation \ref{rollout} on a graph randomly selected in the dataset and at some random epochs. We can observe that the loss and the methic decreases during the training as expected, while the rollout error is not monotonically decreasing. This is due to the fact that the rollout error is computed on a single graph so it is not a good indicator of the model's performance.
+In Table \ref{errors} we show the final rollout errors on the training and the test set, which are computed as the average of the rollout errorr on all the graphs in the dataset.
+
+% immagini da aggiornare con quelle del modello finale
+\begin{figure}[H]
+    \centering
+    \subfloat[Decay of loss function over 300 epochs.]{\includegraphics[width=0.45\textwidth]{Images/loss.jpg}}
+    \subfloat[Decay of metric function over 300 epochs.]{\includegraphics[width=0.45\textwidth]{Images/metric.jpg}}
+    \caption{Loss and metric during the training.}
+    \label{loss}
+\end{figure}
 
 \begin{figure}[H]
     \centering
-    \subfloat[Decay of loss function over epochs.]{\includegraphics[width=0.28\textwidth]{Images/loss.jpg}}
-    \subfloat[Decay of metric function over epochs.]{\includegraphics[width=0.28\textwidth]{Images/metric.jpg}}
-    \subfloat[Rollout error over epochs.]{\includegraphics[width=0.28\textwidth]{Images/rollout.jpg}}
-    \caption{Loss, metric and rollout error during the training.}
-    \label{loss}
+    \includegraphics[width=0.6\textwidth]{Images/rollout.jpg}
+    \caption{Rollout error over 300 epochs.}
+    \label{rollout_plot}
 \end{figure}
 
 \begin{table}[H]
@@ -513,11 +541,12 @@ In Table \ref{errors} we show the final average rollout errors on the training a
         \hline
         \textbf{Dataset} & \textbf{Rollout error} \\
         \hline
-        Training & 0.026 \\
-        Test & 0.029 \\
+        Training & 0.031 \\
+        Test & 0.033 \\
         \hline
     \end{tabular}
     \caption{Average rollout error on the training and the test set.}
+    \label{errors}
 \end{table}
 
 In Figures \ref{train} and \ref{test} we can see some example of the model's predictions on each internal node of a graph from the training and the test set respectively. We don't show the predictions on the inlet and the outlet nodes since they are imposed by the boundary conditions and not predicted by the model.
@@ -546,7 +575,7 @@ The predictions on these graphs compared to the real data are shown in Figures \
 These graphs are generated solving the heat equations on different meshes and with different thermal conductivity constants with respect to the ones used to generate the dataset. 
 We can observe that the predictions are more accurate on the nodes near to the inlet and less accurate on the nodes near to the outlet. 
 Moreover, we have a slightly better performance on the graph with a higher \(k\). 
-This could be due to the fact that with a lower diffusivity constant the values of the heat flux are smaller and the model has more difficulties in predicting them.
+This could be due to the fact that with a lower diffusivity constant the values of the heat flux are smaller and the model has more difficulties in predicting them. The same argument can be applied to the nodes near to the outlet, where the heat flux is smaller with respect to the inlet.
 
 \begin{figure}[H]
     \centering
@@ -572,11 +601,23 @@ This could be due to the fact that with a lower diffusivity constant the values 
 
 
 \section{Further work and possible extensions}
-In this work, we focused on a simple test case to show the potential of this approach, but it can be easily extended. First of all, in the dataset generation the variability of the datatset can be increased simply by changing the parameters of the mesh creation (for example considering not equally spaced interfaces or a higher number of interfaces) and also by changing other parameters of the problem in addition to the diffusivity constant (such as the inlet condition). 
-The only limitation of this point is that the code needs a dictionary containing the tags of the boundaries of the meshes specified by the user and it is not able to automatically recognize them. 
+In this work, we focused on a simple test case to show the potential of this approach, but it can be easily extended. We want to highlight that our model is not robust enough to be used in a real application, since it is trained on a very specific problem and on a dataset with a low variability. This could be improved in different ways.
 
-Another important extension is the possibility to consider different problems, such as the Stokes equation that we already implemented. In our code, to train the graph neural network on the Stokes equation, it is necessary to modify the \texttt{main} function of the \texttt{training.py} file changing the target features to 'flowrate' and 'pressure', and also to modify the number of outputs of the network, which is a command-line argument. It is also required to modify the boundary conditions type in 'Stokes', which is as well a command-line argument.
-Analogously, the code can be extended to other problems, impleting a corresponding \texttt{Solver} class and a corresponding \texttt{DataGenerator} class, inherited from the parent classes, and modifying the \texttt{main} function of the \texttt{training.py} file with the proper target, nodes and edges features. In this case, it may be necessary to change how the boundary conditions are imposed accordingly to the problem considered (it can be done in the \texttt{perform\_timestep} function of the \texttt{rollout.py} file). 
+First of all, in the dataset generation the variability of the datatset can be increased simply by changing the parameters of the mesh creation (for example considering not equally spaced interfaces or a higher number of interfaces) and also by changing other parameters of the problem in addition to the diffusivity constant (such as the inlet condition). 
+In this way, the dataset will be more complex and the model will be more robust. 
+
+In fact, our mesh creation code is limited to the generation of a specific type of mesh, with a single inlet and a single outlet. It could be interesting to extend it to generate more complex meshes, with more inlets and outlets, and also to generate meshes with bifucations and multiple branches, since the graph neural network code is already able to handle this kind of meshes. In this case, it would be necessary to modify the \texttt{DataGenerator} class to make it able to handle more complex meshes. 
+Another easier modification can be to consider a 3-dimensional problem, instead of a 2-dimensional one, in order to make the model more realistic. Apart from the mesh creation, it would be necessary to modify only the \texttt{centerline}  function of the \texttt{DataGenerator}class to make it able to handle 3-dimensional meshes.
+
+About the problems parameters of our test case, we considered only the diffusivity constant as a variable parameter, but it could be interesting to change also the other ones, such as the inlet condition or the source term, or even the time step and the final time. 
+
+Another important extension is the possibility to consider different problems, such as the Stokes equation that we already implemented. We did not generate a dataset for this problem and we did not train the model on this problem for reasons of time, but it can be easily done. To do so, it woud be necessary to choose suitable problem parameters to generate a proper dataset. 
+Once the dataset is generated, to train the graph neural network on the Stokes equation, it is necessary to modify the \texttt{main} function of the \texttt{training.py} file changing the target features to 'flowrate' and 'pressure', and also to modify the number of outputs of the network, which is a command-line argument. It is also required to modify the boundary conditions type in 'stokes', which is as well a command-line argument.
+
+However, this is just an example to show how the code can be extended to other problems analogously, impleting a corresponding \texttt{Solver} class and a corresponding \texttt{DataGenerator} class, inherited from the parent classes, and modifying the \texttt{main} function of the \texttt{training.py} file with the proper target, nodes and edges features. In this case, it may be necessary to change how the boundary conditions are imposed accordingly to the problem considered (it can be done in the \texttt{perform\_timestep} function of the \texttt{rollout.py} file). This is the main limitation in the gNN code that has to be fixed manually by the user when a new problem is considered. 
+
+To conclude, in this work we have managed to implement a fully working pipeline from mesh and dataset generation to training and testing of a graph neural network. In this way, we have shown that this approach can be used to solve a wide range of problems, from fluid dynamics to heat transfer. We believe that this could be a very powerful tool for simulations of complex problems, where the use of traditional numerical methods and of 3-dimensional models is not feasible.
+
 
 %---------------------------------------------------------------------------
 %  BIBLIOGRAPHY
