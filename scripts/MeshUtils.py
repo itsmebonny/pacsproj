@@ -220,6 +220,9 @@ class MeshLoader:
         Args:
             tags: A dictionary containing the tags of the mesh.
             nodes: The number of nodes of the mesh.
+
+        Returns:
+            A dictionary containing the tags of the mesh.
         """
         if nodes == -1 and tags != {}:
             self.tags = tags
@@ -246,6 +249,7 @@ class MeshLoader:
             else:
                 for i in self.tags[j]:
                     self.rename_faces.array()[self.face.array()==i] = i
+        return self.tags
 
     def measure_definition(self):
         """

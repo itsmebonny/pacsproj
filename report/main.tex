@@ -66,6 +66,11 @@
 \usepackage{stfloats} % Correct position of the tables
 \usepackage{multirow}
 \usepackage{multicol}
+\usepackage{twemojis}
+\usepackage{fontawesome}
+\usepackage{listings}
+\usepackage{guit}
+
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta}
 
@@ -245,19 +250,24 @@ The graph neural newtork is trained for 300 epochs on this dataset, a list of th
 
 The implementation of this work is in Python. The mesh generation is done using \texttt{gmsh}, while the variational problem is solved using \texttt{FEniCS}. The graph neural network is implemented using \texttt{PyTorch}. The code is available on GitHub\footnote{The repository can be found}. %\href{mettere il link}}.
 
+\noindent
 The folders and files in the repository are organized as follows:
-
+\medskip
 \begin{itemize}
-    \item \textbf{scripts} This folder contains the scripts with all the classes and functions necessary to create the meshes, solve the variational problem and generate the graphs. 
-    \item \textbf{gNN} This folder contains the code of the graph neural network.
-    \item \textbf{notebooks} This folder contains the jupyter notebooks that can be run to generate the dataset and to test the GNN.
-    \item \textbf{models} This folder contains the trained models.
-    \item \textbf{README.md} This file contains a brief description of the repository and the instructions to run the code.
+    \item[\faFolder] \textbf{scripts}: this folder contains the scripts with all the classes and functions necessary to create the meshes, solve the variational problems and generate the graphs. 
+    \medskip
+    \item[\faFolder] \textbf{gNN}: this folder contains the code of the graph neural network.
+    \medskip
+    \item[\faFolder] \textbf{notebooks}: this folder contains the jupyter notebooks that can be run to generate the dataset and to test the GNN.
+    \medskip
+    \item[\faFolder] \textbf{models}: this folder contains the trained models.
+    \medskip
+    \item[\faFileO] \textbf{README.md}: this file contains a brief description of the repository and the instructions to run the code.
 \end{itemize}
 
 \subsection{Mesh creation}
 
-The \texttt{MeshUtils.py} file is responsible for creating 2D meshes. It contains two classes whose structure in shown in Figure \ref{mesh_class}. The first one is \texttt{MeshCreator} which is used to create meshes using \texttt{gmsh}, while the second one is  \texttt{MeshLoader} which is used to load the meshes created from a \texttt{.xml} file and extract all the features that will be used to solve the variational problem.
+The \texttt{MeshUtils.py} file in the scripts folder is responsible for creating 2D meshes. It contains two classes whose structure in shown in Figure \ref{mesh_class}. The first one is \texttt{MeshCreator} which is used to create meshes using \texttt{gmsh}, while the second one is  \texttt{MeshLoader} which is used to load the meshes from a \texttt{.xml} file and extract all the features that will be used to solve the variational problem.
 
 \begin{figure}[H]
     \centering
@@ -291,8 +301,9 @@ The possible arguments that can be modified by the user are summarized in Table 
 \end{table}
 
 The method \texttt{create\_mesh} generates nmesh new meshes using \texttt{gmsh} and the parameters passed to the constructor. The lengths of the intefaces are random numbers between hmin and hmax, while the distances between the interfaces are random numbers between wmin and wmax if the spacing argument is True, otherwhise they are equispaced and the distance is set equal to wmax. Different tags are assigned to the walls, the inlet boundary, the outlet boundary, each interface and each face. In the end, the meshes are saved in the \texttt{outpu\_dir} in \texttt{.msh} format.
+At the end of this function, the \texttt{convert\_mesh} method is called to convert all the meshes in the \texttt{output\_dir} from \texttt{.msh} to \texttt{.xml} format. 
 
-% poi le mesh vanno convertite in xml cosa devo dire? 
+The last method of the class is \texttt{create\_info\_file} which is used to save a json file in the \texttt{output\_dir} containing the parameters used to generate the meshes.
 
 The \texttt{MeshLoader} class is used to load a mesh from a \texttt{.xml} file. Teh constructor takes as input the name of the file and stores the following attributes:
 \begin{itemize}
@@ -303,19 +314,22 @@ The \texttt{MeshLoader} class is used to load a mesh from a \texttt{.xml} file. 
     \item \texttt{h}: minimun element size, used as characteristic length of the mesh
 \end{itemize}
 
-Another method of the class is \texttt{update\_tags(self,tags)}: this function takes as input a dictionary containing the tags of the mesh. This dictionary must be provided by the user and it has to contain the keys: 'walls', 'inlet', 'outlet', 'interface' and 'faces'. The values of the dictionary are lists of the corresponding tags. The method saves the tags so they can be used later in the code. 
+Another method of the class is \texttt{update\_tags(self,tags,nodes)}: this method can take as input a dictionary containing the tags of the mesh and the number of nodes of the graph (which is the number of interface plus the number of inlets and outlets). If the dictionary is not provided, the method computes automatically the tags dictionary based on the \texttt{nodes} input. The dictionary has the following structure: the keys are the strings 'walls', 'inlet', 'outlet', 'interface' and 'faces' and the values are lists containing the corresponding tags. 
+If the number of nodes is not provided, the dictionary must be provided and it must have the same structure explained above.
 
-The last method is \texttt{measure\_definition(self)}: it return three \texttt{Mesure} FEniCS objects, which are used for integration over external boundaries, internal boundaries (interfaces) and faces. 
+Then the class has the \texttt{measure\_definition(self)} method: it return three \texttt{Mesure} FEniCS objects, which are used for integration over external boundaries, internal boundaries (interfaces) and faces. 
+
+Finally, the mesh can be plotted using the \texttt{plot\_mesh(self)} method.
 
 \subsection{Data generation}
 
-\texttt{GenerateData.py} contains two abstract classes: \texttt{Solver} and \texttt{DataGenerator}. The first one is used to solve the variational problem, while the second one is designed to store all the quantities of interest whichwill be used to build the graphs. Each of these parent classes has two child classes: we start describing the solver one.
+\texttt{GenerateData.py} is located in the \texttt{scripts} folder and it contains two abstract classes: \texttt{Solver} and \texttt{DataGenerator}. The first one is used to solve the variational problem, while the second one is designed to store all the quantities of interest which will be used to build the graphs. Each of these parent classes has two child classes: we start describing the solver one.
 A diagram of the \texttt{Solver} class structure and methods is shown in Figure \ref{solver_class}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{Images/solver_class.png}
-    \caption{Graph generated from the solution of the heat equation.}
+    \caption{\texttt{Solver} class structure and methods.}
     \label{solver_class}
 \end{figure}
 
@@ -327,66 +341,67 @@ The abstract base class \texttt{Solver} contains the following methods:
     \item \texttt{plot\_solution(self)}: abstract method
 \end{itemize}
 
-All the abstract method are overriden in the child classes \texttt{Heat} and \texttt{Stokes}. The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementingchild classes that solve different equations, but with the same structure. 
+All the abstract method are overriden in the child classes \texttt{Heat} and \texttt{Stokes}. The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementing child classes that solve different equations, but with the same structure. 
 We focus on the description of the \texttt{Heat} class, since it is the one used in the test case, but the \texttt{Stokes} class is implemented analogously.
 
-The \texttt{Heat} class contains the following methods overriden from the parent class:
+The \texttt{Heat} class contains the following methods overridden from the parent class:
 \begin{itemize}
-    \item \texttt{\(\twound\)init\(\twound\)(self,mesh, V, k, f, u0, dt, T, g, doplot=False)}: constructor which uses the \texttt{super()} function to inherit the base class constructor. The other problem parameters passed to the constructor are the function space, the diffusivity constant, the source term, the initial condition, the time step, the final step, the Neumann boundary condition at the inlet and a boolean variable to plot the solution at each time step. 
+    \item \texttt{\(\twound\)init\(\twound\)(self,mesh, V, k, f, u0, dt, T, g, doplot=False)}: constructor which uses the \texttt{super()} function to inherit the base class constructor. The other problem parameters passed to the constructor are the function space, the diffusivity constant, the source term, the initial condition, the time step, the final step, the Neumann boundary condition at the inlet and a boolean variable to decide if the solution at each time step has to be plotted or not.
     \item \texttt{set\_parameters(self,V,k,f,u0,dt,T,g)}: function to set different problem parameters
-    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method and imposing a Neumann conditiona at the inlet boundary. The solution at each time step is stored in a numpy array, as well as the time instants. 
+    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method, imposing a non-homogeneous Neumann condition at the inlet boundary and no-flux condition at the walls and at the outlet. The temperature at each time step is stored in a numpy array, as well as the time instants. 
     \item \texttt{plot\_solution(self,u)}: it takes as input the solution at a specific time step and it plots it.
 \end{itemize}
-
-The second abstract base class \texttt{DataGenerator} is schematized in Figure \ref{datagenerator_class}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\textwidth]{Images/datagenerator_class.png}
-    \caption{Graph generated from the solution of the heat equation.}
+    \caption{\texttt{DataGenerator} class structure and methods.}
     \label{datagenerator_class}
 \end{figure}
 
+The second abstract base class \texttt{DataGenerator} is schematized in Figure \ref{datagenerator_class}.
+
 It contains the following methods:
 \begin{itemize}
-    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object. It saves as attribute of the object \texttt{NNodes} which will be the number of nodes of the graph and it is set as the sum of the number of inlets, outlets and interfaces.
+    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object. It saves \texttt{NNodes} as attribute of the object  which will be the number of nodes of the graph and it is set as the sum of the number of inlets, outlets and interfaces.
     \item \texttt{flux(self)}: abstract method 
     \item \texttt{inlet\_flux(self)}: abstract method
     \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
-    \item \texttt{nodes\_data(self)}: this function save as attribute of the object
-    a dictionary containing the time independent nodes features. The keys of the dictionary
-    are strings with the name of the features and the values are numpy arrays containing the values at each node.
+    \item \texttt{nodes\_data(self)}: this function saves as attribute of the object a dictionary containing the time independent nodes features. The keys of the dictionary are strings with the name of the features and the values are numpy arrays containing the values at each node. The features considered for each node are the thermal diffusivity, the interface length where the node is located, the nodal type (inlet, outlet or branch node) and a global node ID.
     \item \texttt{td\_nodes\_data(self)}: abstract method
-    \item \texttt{create\_edges(self)}: it stores as attributes of the object two numpy arrays (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the nodes ID of the source nodes of every edge and the node ID of the destination nodes.
-    \item \texttt{edges\_data(self)}: it stores as attributes of the object a dictionary    containing the edge feature. The dictionary structure is analogous to the one of the node features.
-    \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array of size \((NNodes,2)\).
-    \item \texttt{save\_graph(self, fields\_names, output\_dir)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns s dgl graph which is generated calling some functions defined in \texttt{generate\_graphs.py}, that will be described in the next section. 
+    \item \texttt{create\_edges(self)}: it stores as attributes of the object two numpy arrays (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the node IDs of the source nodes of every edge and the node IDs of the destination nodes.
+    \item \texttt{edges\_data(self)}: it stores as attributes of the object a dictionary containing the edge feature. The dictionary structure is analogous to the one of the node features. The features saved are the distance between the nodes connected by the edge and the area of the trapezoid corresponding to the edge.
+    \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array of size \(NNodes \times 2\).
+    \item \texttt{save\_graph(self, output\_dir,fields\_names)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns a dgl graph which is generated calling the functions defined in \texttt{generate\_graphs.py}, that will be described in the next section. 
+    \item \texttt{generate\_json(output\_dir,model\_type)}: this function is used to generate and save in the output directory (that must be the directory containing the graphs) a json file containing information about the dataset. This file is necessary to make the dataset compatible with the gNN code. 
 \end{itemize}
 
-As for the \texttt{Solver} class, the abstract methods are overriden in the two child classes \texttt{DataNS}
+As for the \texttt{Solver} class, the abstract methods are overridden in the two child classes \texttt{DataNS}
 and \texttt{DataHeat}. The \texttt{DataHeat} class includes these methods:
 \begin{itemize}
-    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor inherited from the parent class. 
-    \item \texttt{flux(self,tag,u)}: method overriden from the parent class, it computes the heat flux of the solution \(u\) at the interface corresponding to the tag passed as input.
-    \item \texttt{inlet\_flux(self,tag,u)}: method overriden from the parent class, it computes the heat flux at the inlet. The solution \(u\) and the tag of the inlet boundary are passe as input. 
-    \item \texttt{td\_nodes\_data(self)}: methos overriden from the parent class, it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as key the time instant and as value a numpy array containg the heat flux at that time instant at each node.
-    \item \texttt{save\_graphs}: method inherited from the parent class using the \texttt{super()} function, but the input \texttt{fields\_names} is a list containing only the string \texttt{'flux'}.
+    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor inherited from the parent class. Two additional attributes are introduced: \texttt{model\_type} and \texttt{target\_fields}. The first one is a string containing the name of the equation considered, which is 'heat' in this case. The second one is a list containing the name of the time dependent features of the graph, which we call 'target features' since they are the features that the GNN has to predict. In this case the list contains only the string 'flux'.
+    \item \texttt{flux(self,tag,u)}: method overridden from the parent class, it computes the heat flux of the solution \(u\) at the interface corresponding to the tag passed as input.
+    \item \texttt{inlet\_flux(self,tag,u)}: method overridden from the parent class, it computes the heat flux at the inlet. The solution \(u\) and the tag of the inlet boundary are passe as input. 
+    \item \texttt{td\_nodes\_data(self)}: methos overridden from the parent class, it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as key the time instant and as value a numpy array containing the heat flux at that time instant at each node.
+    \item \texttt{save\_graphs(self, output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the inputs \texttt{fields\_names} and \texttt{model\_type} are the \texttt{target\_fields} and \texttt{model\_type} attributes of the object.
+    \item \texttt{generate\_json(self,output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the \texttt{model\_type} input is the homonymous attribute of the object.
 \end{itemize}
 
-The \texttt{DataNS} is build analogously, with the only difference that the time dependent features are the flow rate and the pressure instead of the heat flux. In this case, the \texttt{flux} and \texttt{inlet\_flux} method computes the flow rate at the interfaces and at the inlet respectively. In addition, the class has a method \texttt{outlet\_flux} that computes the flow rate at the outlet and two other methods \texttt{mean\_pressure\_interface} and \texttt{mean\_pressure\_boundaries} that computes the mean pressure at the interfaces and at the inlet and outlet boundaries respectively.
+The \texttt{DataNS} is build analogously, with the only difference that the time dependent features are the flow rate and the pressure instead of the heat flux. In this case, the \texttt{flux} and \texttt{inlet\_flux} method computes the flow rate at the interfaces and at the inlet respectively. In addition, the class has a method \texttt{outlet\_flux} that computes the flow rate at the outlet and two other methods, \texttt{mean\_pressure\_interface} and \texttt{mean\_pressure\_boundaries}, that compute the mean pressure at the interfaces and at the inlet and outlet boundaries respectively.
 
 \subsection{Graph generation}
-In this section we describe the functions defined in \texttt{generate\_graphs.py} that are used to generate a dgl graph from the data obtained from the \texttt{DataGenerator} class. This file contains three functions: 
+
+In this section we describe the functions defined in \texttt{generate\_graphs.py}, included in the \texttt{scripts} folder, that are used to generate a dgl graph from the data obtained from the \texttt{DataGenerator} class. This file contains three functions: 
 \begin{itemize}
     \item \texttt{generate\_graph(point\_data, points, edges\_data, edges1, edges2)}: this function takes as input a dictionary containing the time independent node features, a numpy array with the node coordinates, a dictionary containing the edge features and two numpy arrays containing the source and destination nodes of the edges. It return a dgl graph with the node and edge features stored as pytorch tensors.
-    \item \texttt{add\_fields(graph, field, field\_name, offset=0)}: function to add a time dependent feature to the dgl graph. It take as input the dgl graph, a dictionary containing the field values at each time step, the name of the field and an offset with the number of time steps to skip. It returns the dgl graph with the new field added.
-    \item \texttt{save\_graph(filename, output\_dir)}: function to save the dgl graph in a file in the output directory.
+    \item \texttt{add\_fields(graph, field, field\_name, offset=0)}: function to add a time dependent feature to the dgl graph. It take as input the dgl graph, a dictionary containing the field values at each time step, the name of the field to insert and an offset with the number of time steps to skip. It returns the dgl graph with the new field added.
+    \item \texttt{save(filename, output\_dir)}: function to save the dgl graph in a file in the output directory.
 \end{itemize}
+
+All this function are invoked by the \texttt{save\_graph} method of the \texttt{DataGenerator} class, in this way a graph with all the necessary features is generated and saved in the output directory.
 
 \subsection{Graph Neural Network}
 \label{gnn}
-
-% qui dovremmo spiegare non come funziona la gnn teoricamente perché è già scritto sopra (e al massimo facciamo l'appendix) ma più che altro cosa fanno i vari file che ci sono (a grandi linee perché non l'abbiamo scritta noi) e tipo dire quali sono le parti che abbiamo modificato noi 
 
 \subsubsection*{Code Structure}
 To better understand the behavior of the network, it is necessary to look at its inner mechanisms. 
@@ -415,9 +430,7 @@ The method inside this class are the following:
 
 Here we describe the training process more in detail. The process is done using the \texttt{training.py} file and the \texttt{rollout.py} file. The first one is used to perform the steps necessary to train the network, like backpropagation and loss computation, while the second one is used to perform the forward step of the network and compute the predictions.
 
-The training of the network starts with the definition of its hyperparameters 
-
-
+The training of the network starts with the definition of its hyperparameters described in Table \ref{hyperparams_description}. In particular, the first four parameters are the ones that define the network architecture, as explained in the previous section. The \texttt{rate\_noise} and \texttt{rate\_noise\_features} parameters are related to the noise that is added to the system state during the training process, to make the model more robust. The parameters listed in this table are the one from the original implementation, but we added some more to make the network more flexible, specifically a \texttt{n\_nout} parameter that defines the number of outputs of the network (and it must be equal to the number of target features) and a \texttt{bc\_type} which is a string that defines the type of boundary condition that has to be imposed (e.g. 'heat' in our test case).
 
 \begin{table}[ht]
 \centering
@@ -435,22 +448,27 @@ lr\_decay & Learning rate decay \\
 nepochs & Number of epochs \\
 weight\_decay & Weight decay for the optimizer \\
 rate\_noise & Rate of noise \\
-rate\_noise\_features & Rate of noise features \\
+rate\_noise\_features & Rate of noise for the features \\
 stride & Stride \\
-bcs\_gnn & Boundary conditions of the GNN \\
 \hline
 \end{tabular}
+\caption{Hyperparameters of the network.}
+\label{hyperparams_description}
 \end{table}
 
-With all the hyperparameters set, we can start the training process. Since this part of the code was only modified by us, we will not go into much detail, but we will only describe the main steps. The training starts by taking a dataset composed of \texttt{DGL} graphs, which are split into a train set and a test set. Then are defined a loss (MSE) and a metric (MAE). The dataset is created in such a way that to train the network on all the graphs a map is needed so that when a single time-step is evaluated, the network is able to map that single time-step to the correct graph. The time-step is performed using the function \texttt{perform\_timestep} from the \texttt{rollout.py} file. This function takes as input the model, the graph and the previous time-step and predict the value of the quantity of interest at the next step in time. This function is used also when evaluating the model since when we use it while training we compute the loss between the model's prediction and the ground truth, updating the weights of the network accordingly, while when we compute the rollout errors we use the model in inference mode and then compute the error between the prediction and the ground truth.
+With all the hyperparameters set, we can start the training process. Since this part of the code was only modified by us, we will not go into much detail, but we will only describe the main steps. The training starts by taking a dataset composed of \texttt{DGL} graphs, which are split into a train set and a test set. Then are defined a loss (MSE) and a metric (MAE). The dataset is created in such a way that to train the network on all the graphs a map is needed so that when a single time-step is evaluated, the network is able to map that single time-step to the correct graph. The forward step is performed using the function \texttt{perform\_timestep} from the \texttt{rollout.py} file. This function takes as input the model, the graph and the previous time-step and predict the value of the quantity of interest at the next step in time. It also takes as input an array containing the boundary conditions and a boolean variable that indicates if the boundary conditions have to be imposed: if the boolean variable is True, the boundary conditions are imposed according to the \texttt{bc\_type} parameter.
+This function is used also when evaluating the model since when we use it while training we compute the loss between the model's prediction and the ground truth, updating the weights of the network accordingly, while when we compute the rollout errors we use the model in inference mode and then compute the error between the prediction and the ground truth.
 
 While the original implementation was meant to work only with blood flow data, we modified the original code so that, given a suitable dataset, it can be used to solve any problem. The main changes that we made are the following:
 \begin{itemize}
     \item We modified the data generation part of the code to make it suitable for any kind of problem. In particular, we made sure that during the dataset creation, the \(N\) Quantities of Interest (QoI) are stored in the first \(N\) position of the dictionary containing the node features. This is done to make sure that the network can access the QoI easily. 
     \item We modified the dataset generation part in a way such that the program is able to create \(N\) deltas, one for each QoI. In this way we obtain our true update of the system state, which is the difference between the QoI at the current time-step and the QoI at the previous time-step. These deltas will be used to compute the loss of the network. 
     \item We modified the \texttt{training.py} file to make it able to take as input the number of outputs needed by the network. In this way we have completely generalized our library to be able to receive as input any suitable dataset.
-    
 \end{itemize}
+
+With these modifications, the network is able to predicit a variable number of QoI, which have to be specified by the user in the \texttt{main} function of the \texttt{training.py} file, in a list called \texttt{target\_features}. 
+The limitation that persist despite of out changes, is the imposition of the boundary conditions. In fact, the network is able to impose only two types of boundary conditions that we called 'heat' and 'stokes', accordingly to the type of problem that we are solving in this work. Particularly, the 'heat' boundary condition that we used in the test case imposes the exact heat flux at the inlet node (Neumann boundary condition) and the zero heat flux at the outlet node (homogeneous Neumann boundary condition). If a new problem is considered, the user has to modify the \texttt{perform\_timestep} function in the \texttt{rollout.py} file in order to impose the correct boundary conditions.
+    
 \subsection*{Tester}
 The \texttt{tester.py} file is used to test the trained model on graphs from the training and test set and on new graphs. The file is composed of the following already implemented functions: 
 \begin{itemize}

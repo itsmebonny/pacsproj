@@ -485,7 +485,7 @@ class DataGenerator(ABC):
         self.center_line = center_line
         return center_line
 
-    def save_graph(self, output_dir, model_type, fields_names):
+    def save_graph(self, output_dir, fields_names):
         """
         Saves the graph with the specified fields.
 
@@ -507,12 +507,44 @@ class DataGenerator(ABC):
         if not hasattr(self, 'EdgesData'):
             self.edges_data()
         self.graph = gg.generate_graph(self.NodesData, self.center_line, self.EdgesData, self.edges1, self.edges2)
-        print(self.TDNodesData)
         for i,key in enumerate(fields_names):
             gg.add_field(self.graph, self.TDNodesData[i], key)
         gg.save(self.graph, f"k_{self.solver.k}", output_dir)
-        gg.generate_json(output_dir,model_type)
         return self.graph
+    
+    def generate_json(self,output_dir,model_type):
+        """
+        Generate JSON file containing information about the dataset.
+
+        Arguments:
+            output_dir (string): path to output directory
+            model_type (string): equation type (e.g. "heat")
+        """
+
+        input_directory = os.path.expanduser(output_dir)
+
+        input_directory = os.path.realpath(input_directory)
+
+        # Initialize an empty dictionary to store JSON objects for each file
+        json_dict = dict()
+
+        # Iterate through each .grph file in the directory
+        for graph_file in os.listdir(input_directory):
+            if graph_file.endswith(".grph"):
+                # Extract the filename without extension
+                filename_no_extension = os.path.splitext(graph_file)[0]
+
+                # Create a dictionary for each .grph file
+                json_dict[filename_no_extension] = {
+                    "model_type": model_type
+                }
+
+        # Save the dictionary as a JSON file
+        json_file_path = os.path.join(input_directory, "dataset_info.json")
+        with open(json_file_path, 'w') as json_file:
+            json.dump(json_dict, json_file, indent=2)
+
+        print(f"Created {json_file_path}")
     
 
 class DataNS(DataGenerator):
@@ -643,7 +675,18 @@ class DataNS(DataGenerator):
         Args:
             output_dir: The directory to save the graph in.
         """
-        return super().save_graph(output_dir,self.model_type,self.target_fields)
+        return super().save_graph(output_dir,self.target_fields)
+    
+    def generate_json(self,output_dir):
+        """
+        Generate JSON file containing information about the dataset.
+
+        The function calls the generate_json method of the super class, passing the model_type attributes.
+
+        Arguments:
+            output_dir (string): path to output directory
+        """
+        return super().generate_json(output_dir,self.model_type)
     
 
 # Define a subclass DataHeat that inherits from the DataGenerator abstract base class
@@ -670,7 +713,7 @@ class DataHeat(DataGenerator):
         """
         super().__init__(solver, mesh)
         self.model_type = "heat"
-        self.fields_names = ['flux']
+        self.target_fields = ['flux']
 
     
     def flux(self, interface, u):
@@ -736,4 +779,15 @@ class DataHeat(DataGenerator):
         Args:
             output_dir: The directory to save the graph in.
         """
-        return super().save_graph(output_dir,self.model_type,self.fields_names)
+        return super().save_graph(output_dir,self.target_fields)
+
+    def generate_json(self,output_dir):
+        """
+        Generate JSON file containing information about the dataset.
+
+        The function calls the generate_json method of the super class, passing the model_type attributes.
+
+        Arguments:
+            output_dir (string): path to output directory
+        """
+        return super().generate_json(output_dir,self.model_type)

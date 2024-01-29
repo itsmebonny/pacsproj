@@ -527,6 +527,8 @@ def parse_command_line_arguments():
     #                     type=str, default='models_bcs/31.10.2022_01.35.31')
     parser.add_argument('--nout', help='number of output',
                         type=int, default=1)
+    parser.add_argument('--bc_type', help='type of the boundary conditions',
+                        type=str, default='heat')
     args = parser.parse_args()
 
     # we create a dictionary with all the parameters
@@ -543,7 +545,8 @@ def parse_command_line_arguments():
                 'rate_noise_features': args.rate_noise_features,
                 'stride': args.stride,
                 # 'bcs_gnn': args.bcs_gnn,
-                'nout': args.nout
+                'nout': args.nout,
+                'bc_type': args.bc_type
                 }
 
     return t_params, args
@@ -552,7 +555,7 @@ def get_graphs_params(label_normalization, types_to_keep,
                       n_graphs_to_keep = -1,
                       graphs_folder = 'graphs_stokes/',
                       data_location = io.data_location(),
-                      features = None):
+                      features = None, bc_type = 'heat'):
     """
     Get normalized graphs and associated parameters
 
@@ -579,7 +582,7 @@ def get_graphs_params(label_normalization, types_to_keep,
     t2k = types_to_keep
     ngtk = n_graphs_to_keep
     graphs, params  = gng.generate_normalized_graphs(input_dir, norm_type, 
-                                                    'heat',
+                                                    bc_type,
                                                     {'dataset_info' : info,
                                                     'types_to_keep': t2k},
                                                     n_graphs_to_keep=ngtk,
@@ -606,6 +609,7 @@ def training(parallel, rank = 0, graphs_folder = 'graphs_rm/',
 
     """
     t_params, args = parse_command_line_arguments()
+    bc_type = t_params['bc_type']
 
     if args.label_norm == 0:
         label_normalization = 'min_max'
@@ -617,7 +621,7 @@ def training(parallel, rank = 0, graphs_folder = 'graphs_rm/',
     graphs, params, info = get_graphs_params(label_normalization,
                                              types_to_keep, -1,
                                              graphs_folder, data_location,
-                                             features)
+                                             features, bc_type)
     graph = graphs[list(graphs)[0]]
 
 
