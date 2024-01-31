@@ -1,12 +1,13 @@
 # test if all the packages are installed correctly
 
-import numpy as np
-import matplotlib.pyplot as plt
-import torch as th
-from dolfin import *
-import meshio
-import dgl 
-import scipy 
-import tqdm 
 
-print("All packages are installed correctly!")
+packages = ['numpy', 'matplotlib', 'torch', 'dolfin', 'meshio', 'dgl', 'scipy', 'tqdm']
+flag = False
+for package in packages:
+    try:
+        __import__(package)
+    except ImportError:
+        flag = True
+        print(f"{package} is not installed.")
+if not flag:
+    print("All packages are installed correctly!")
