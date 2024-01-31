@@ -237,6 +237,9 @@ The graph neural newtork is trained for 300 epochs on this dataset, a list of th
         latent size mlps & 16\\
         normalization type & 1 (normal) \\
         stride & 5 \\
+        n\_out & 1 \\
+        bc\_type &  `heat' \\
+        optimizer & `adam' \\
         \hline   
     \end{tabular}
     \caption{Hyperparameters used for the GNN training.}
@@ -433,7 +436,7 @@ The method inside this class are the following:
 
 Here we describe the training process more in detail. The process is done using the \texttt{training.py} file and the \texttt{rollout.py} file. The first one is used to perform the steps necessary to train the network, like backpropagation and loss computation, while the second one is used to perform the forward step of the network and compute the predictions.
 
-The training of the network starts with the definition of its hyperparameters described in Table \ref{hyperparams_description}. In particular, the first four parameters are the ones that define the network architecture, as explained in the previous section. The \texttt{rate\_noise} and \texttt{rate\_noise\_features} parameters are related to the noise that is added to the system state during the training process, to make the model more robust. The parameters listed in this table are the one from the original implementation, but we added some more to make the network more flexible, specifically a \texttt{n\_nout} parameter that defines the number of outputs of the network (and it must be equal to the number of target features) and a \texttt{bc\_type} which is a string that defines the type of boundary condition that has to be imposed (e.g. 'heat' in our test case).
+The training of the network starts with the definition of its hyperparameters described in Table \ref{hyperparams_description}. In particular, the first four parameters are the ones that define the network architecture, as explained in the previous section. The \texttt{rate\_noise} and \texttt{rate\_noise\_features} parameters are related to the noise that is added to the system state during the training process, to make the model more robust. The first parameters listed in this table are the one from the original implementation, but we added three more to make the network more flexible: a \texttt{n\_nout} parameter that defines the number of outputs of the network (and it must be equal to the number of target features), a \texttt{bc\_type} which is a string that defines the type of boundary condition that has to be imposed (e.g. 'heat' in our test case) and the \texttt{optimizer} parameter which allows the user to choose the optimizer to use during the training process.
 
 \begin{table}[H]
 \centering
@@ -453,6 +456,9 @@ weight\_decay & Weight decay for the optimizer \\
 rate\_noise & Rate of noise \\
 rate\_noise\_features & Rate of noise for the features \\
 stride & Stride \\
+n\_out & Number of outputs of the network \\
+bc\_type & Type of boundary condition \\
+optimizer & Optimizer \\
 \hline
 \end{tabular}
 \caption{Hyperparameters of the network.}

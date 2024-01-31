@@ -328,8 +328,19 @@ def train_gnn_model(gnn_model, dataset, params, parallel, doprint = True):
         % (dist.get_rank(), dist.get_world_size(), len(train_dataloader)),\
         flush=True)
         # lr = params['learning_rate'] / dist.get_world_size()
-    
-    optimizer = th.optim.Adam(gnn_model.parameters(), lr,
+
+    if params['optimizer'] == 'adam' or params['optimizer'] == 'Adam':
+        optimizer = th.optim.Adam(gnn_model.parameters(), lr,
+                              weight_decay = params['weight_decay'])
+    elif params['optimizer'] == 'sgd' or params['optimizer'] == 'SGD':
+        optimizer = th.optim.SGD(gnn_model.parameters(), lr,
+                              weight_decay = params['weight_decay'])
+    elif params['optimizer'] == 'adagrad' or params['optimizer'] == 'Adagrad':
+        optimizer = th.optim.Adagrad(gnn_model.parameters(), lr,
+                              weight_decay = params['weight_decay'])
+    else:
+        print('Unknown optimizer, using Adam')
+        optimizer = th.optim.Adam(gnn_model.parameters(), lr,
                               weight_decay = params['weight_decay'])
 
     nepochs = params['nepochs']
@@ -529,6 +540,8 @@ def parse_command_line_arguments():
                         type=int, default=1)
     parser.add_argument('--bc_type', help='type of the boundary conditions',
                         type=str, default='heat')
+    parser.add_argument('--optimizer', help='type of optimizer', type=str,
+                        default='adam')
     args = parser.parse_args()
 
     # we create a dictionary with all the parameters
@@ -546,7 +559,8 @@ def parse_command_line_arguments():
                 'stride': args.stride,
                 # 'bcs_gnn': args.bcs_gnn,
                 'nout': args.nout,
-                'bc_type': args.bc_type
+                'bc_type': args.bc_type,
+                'optimizer': args.optimizer
                 }
 
     return t_params, args
