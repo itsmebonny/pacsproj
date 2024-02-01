@@ -22,7 +22,13 @@ We divided the code into three main folders:
 This installation procedure assumes that the user has already installed FEniCS in an Anaconda environment. If this is not the case, please refer to the [FEniCS installation guide](https://fenicsproject.org/download/archive/).
 To install the library, please follow these steps:
 
-1. Clone the repository
+1. Clone the repository 
+
+```bash 
+git clone https://github.com/itsmebonny/pacsproj.git
+cd pacsproj
+```
+
 2. Activate the FEniCS environment
 3. Install the required packages using `pip install -r requirements.txt`
 4. Check if the installation was successful by running the script `python scripts/test_installation.py`
