@@ -352,7 +352,7 @@ The possible arguments that can be modified by the user are summarized in Table 
         \textbf{Argument} & \textbf{Description} \\
         \hline
         nmesh & number of meshes to create \\
-        nodes & number of nodes \\
+        interfaces & number of interfaces \\
         lc & characteristic length of the mesh \\
         hmax & maximum length of the interfaces \\
         hmin & minimum length of the interfaces \\
@@ -730,15 +730,15 @@ This could be due to the fact that with a lower diffusivity constant the values 
 
 
 \section{Further work and possible extensions}
-In this work, we focused on a simple test case to show the potential of this approach, but it can be easily extended. We want to highlight that our model is not robust enough to be used in a real application, since it is trained on a very specific problem and on a dataset with a low variability. This could be improved in different ways.
-
-First of all, in the dataset generation the variability of the datatset can be increased simply by changing the parameters of the mesh creation (for example considering not equally spaced interfaces or a higher number of interfaces) and also by changing other parameters of the problem in addition to the diffusivity constant (such as the inlet condition). 
+In this work, we focused on the implementation of an environment able to generate everything needed to train the Graph Neural Network and to test it on new graphs. One of the main modifications that we made to the original code is the possibility to train the network on different problems, such as the heat equation and the Stokes equation, but potentially any time dependent problem.
+However, there are still some limitations that could be fixed. One could be a deeper rewrite of the GNN code, which was built around a specific problem, and it is not very flexible. Also, our model is not very robust and couldn't be used to solve any real problem. One of its weaknesses is that we trained it on a very specific and simple problem, with a dataset that has little variability. This could be solved in a number of ways.
+First, in the dataset generation the variability of the dataset can be increased simply by changing the parameters of the mesh creation (for example considering not equally spaced interfaces or a higher number of interfaces) and also by changing other parameters of the problem in addition to the diffusivity constant (such as the inlet condition). 
 In this way, the dataset will be more complex and the model will be more robust. 
 
 In fact, our mesh creation code is limited to the generation of a specific type of mesh, with a single inlet and a single outlet. It could be interesting to extend it to generate more complex meshes, with more inlets and outlets, and also to generate meshes with bifucations and multiple branches, since the graph neural network code is already able to handle this kind of meshes. In this case, it would be necessary to modify the \texttt{DataGenerator} class to make it able to handle more complex meshes. 
 Another easier modification can be to consider a 3-dimensional problem, instead of a 2-dimensional one, in order to make the model more realistic. Apart from the mesh creation, it would be necessary to modify only the \texttt{centerline}  function of the \texttt{DataGenerator} class to make it able to handle 3-dimensional meshes.
 
-About the problems parameters of our test case, we considered only the diffusivity constant as a variable parameter, but it could be interesting to change also the other ones, such as the inlet condition or the source term, or even the time step and the final time. 
+About the problems parameters of our test case, we considered only the diffusivity constant as a variable parameter, but it could be interesting to change also the other ones, such as the inlet condition or the source term, or even the time step and the final time.
 
 Another important extension is the possibility to consider different problems, such as the Stokes equation that we already implemented. We did not generate a dataset for this problem, and we did not train the model on this problem for reasons of time, but it can be easily done. To do so, it would be necessary to choose suitable problem parameters to generate a proper dataset. 
 Once the dataset is generated, to train the graph neural network on the Stokes equation, it is necessary to modify the \texttt{main} function of the \texttt{training.py} file changing the target features to `flowrate' and `pressure', and also to modify the number of outputs of the network, which is a command-line argument. It is also required to modify the boundary conditions type in `stokes', which is as well a command-line argument.

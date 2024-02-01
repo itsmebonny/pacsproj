@@ -14,8 +14,8 @@ We divided the code into three main folders:
 
 ### Prerequisites
 
-- Python 3.x
-- Required packages: FEniCS, numpy, matplotlib, torch, dgl, gmsh, meshio, scipy, tqdm, jupyter 
+- Python <=3.10
+- Required packages: FEniCS
 
 ### Installation
 
@@ -32,6 +32,13 @@ cd pacsproj
 2. Activate the FEniCS environment
 3. Install the required packages using `pip install -r requirements.txt`
 4. Check if the installation was successful by running the script `python scripts/test_installation.py`
+5. Store the data path in a file called `data_location.txt`, which needs to be saved in `gNN/tools/`
+
+```bash
+cd data
+echo $(pwd) > gNN/tools/data_location2.txt
+cd ..
+```
 
 ### Usage
 
@@ -42,7 +49,7 @@ The library is able to create meshes, solve variational problems, save them in a
 The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside the script, one can modify the variables `filename` and `output_dir` to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
 
 - `--nmesh`: number of meshes to generate;
-- `--nodes`: number of the interfaces inside the mesh;
+- `--interfaces`: number of the interfaces inside the mesh;
 - `--seed`: seed for the random generation of the meshes;
 - `--hmax`: maximum length of interfaces;
 - `--hmin`: minimum length of interfaces;
@@ -58,7 +65,8 @@ The library is built to solve the following problems:
 - Heat diffusion
 - Stokes problem
 
-There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The scripts are `scripts/HeatDatasetGen.py` and `scripts/StokesDatasetGen.py`. These two scripts solve the two problems and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the mesh directory modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem. 
+There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The scripts are `scripts/HeatDatasetGen.py` and `scripts/StokesDatasetGen.py`. These two scripts solve the two problems and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the directory in which the mesh are stored modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem.
+
 To run the script, the user can run the command
 
 ```python

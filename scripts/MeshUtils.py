@@ -53,7 +53,7 @@ class MeshCreator:
         self.wmax = args.wmax
         self.wmin = args.wmin
         self.spacing = args.spacing
-        self.nodes = args.nodes
+        self.interfaces = args.interfaces
 
     def create_mesh(self, filename, output_dir):
         """
@@ -166,7 +166,7 @@ class MeshCreator:
         json_dict["wmax"] = self.wmax
         json_dict["wmin"] = self.wmin
         json_dict["spacing"] = self.spacing
-        json_dict["nodes"] = self.nodes
+        json_dict["interfaces"] = self.interfaces
         json_dict["mesh_name"] = meshname
 
         json_file_path = os.path.join(output_dir, "mesh_info.json")
@@ -275,7 +275,7 @@ and the output directory and the filename can be set in the main function.
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Mesh creation')
-    parser.add_argument('--nodes', help='number of nodes', type=int, default=5)
+    parser.add_argument('--interfaces', help='number of nodes', type=int, default=5)
     parser.add_argument('--lc', help='mesh size', type=float, default=0.1)
     parser.add_argument('--hmax', help='max height of the domain', type=float, default=5.0)
     parser.add_argument('--hmin', help='min height of the domain', type=float, default=0.5)
