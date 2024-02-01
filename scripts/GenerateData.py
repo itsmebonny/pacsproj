@@ -60,7 +60,8 @@ class Stokes(Solver):
     """
     Class representing a Stokes solver.
 
-    This class inherits from the Solver class and provides methods to solve the Stokes equation.
+    This class inherits from the Solver class and provides 
+    methods to solve the Stokes equation.
 
     Attributes:
         mesh (Mesh): Mesh object.
@@ -75,7 +76,8 @@ class Stokes(Solver):
         dt (float): Time step.
         T (float): Final time.
         k (float): Reynolds number.
-        doplot (bool): Flag indicating whether to plot the solution at each time step.
+        doplot (bool): Flag indicating whether to 
+                       plot the solution at each time step.
         ts (numpy.ndarray): Array of time steps.
         ut (numpy.ndarray): Array of velocity solutions at each time step.
         pt (numpy.ndarray): Array of pressure solutions at each time step.
@@ -96,7 +98,8 @@ class Stokes(Solver):
             f (Expression): Source term.
             dt (float): Time step.
             T (float): Final time.
-            doplot (bool): Flag indicating whether to plot the solution at each time step.
+            doplot (bool): Flag indicating whether to plot
+                           the solution at each time step.
         """
         super().__init__(mesh)
         self.V = V
@@ -219,7 +222,8 @@ class Heat(Solver):
     """
     Class representing a heat solver.
 
-    This class inherits from the Solver class and provides methods to solve the heat equation using the Discontinuous Galerkin method with non-homogeneous Neumann boundary conditions.
+    This class inherits from the Solver class and provides methods to solve the heat equation 
+    using the Discontinuous Galerkin method with non-homogeneous Neumann boundary conditions.
 
     Attributes:
         V (FunctionSpace): Function space for the solution.
@@ -285,7 +289,9 @@ class Heat(Solver):
         """
         Method to solve the heat equation.
 
-        The problem is solved using the Discontinuous Galerkin method and imposing non-homogeneous Neumann boundary condition at the inlet and homogeneous Neumann boundary condition at the outlet and walls.
+        The problem is solved using the Discontinuous Galerkin method 
+        and imposing non-homogeneous Neumann boundary condition at the inlet 
+        and homogeneous Neumann boundary condition at the outlet and walls.
 
         Returns:
             numpy.ndarray: Array of solutions at each time step.
@@ -352,7 +358,8 @@ class DataGenerator(ABC):
         NNodes: The number of interfaces in the mesh.
         edges1 (numpy.ndarray): Source nodes of the edges.
         edges2 (numpy.ndarray): Destination nodes of the edges.
-        center_line (numpy.ndarray): The centerline coordinates of the inlet, interfaces and outlet of the mesh.
+        center_line (numpy.ndarray): The centerline coordinates of the inlet, 
+                                     interfaces and outlet of the mesh.
         NodesData (dict): A dictionary containing the nodes features.
         EdgesData (dict): A dictionary containing the edges features.
 
@@ -409,7 +416,8 @@ class DataGenerator(ABC):
         """
         Stores the edges data in a dictionary.
 
-        The data stored for each edge are the edge ID, the area of the face where the edge is located and the length of the edge.
+        The data stored for each edge are the edge ID, the area of the face 
+        where the edge is located and the length of the edge.
 
         Returns: 
             The dictionary containing the edges data.
@@ -428,7 +436,9 @@ class DataGenerator(ABC):
         """
         Stores the data of the nodes in a dictionary.
 
-        The data stored are the thermal conductivity, the node IDs, the inlet mask, the outlet mask and the length of the interface where the node is located.
+        The data stored are the thermal conductivity, the node IDs, 
+        the inlet mask, the outlet mask and the length of the interface 
+        where the node is located.
 
         Returns:
             The dictionary containing the nodes data.
@@ -460,10 +470,12 @@ class DataGenerator(ABC):
 
     def centerline(self):
         """
-        Computes the centerline coordinates of the mesh corresponding to the inlet, interfaces and outlet.
+        Computes the centerline coordinates of the mesh corresponding 
+        to the inlet, interfaces and outlet.
 
         Returns:
-            A n x 2 numpy array with the centerline coordinates of the mesh, where n is the number of nodes.
+            A n x 2 numpy array with the centerline coordinates of the mesh, 
+            where n is the number of nodes.
         """
         center_line = np.zeros((self.NNodes,2)) # should be an array of arrays (commonly known as list of lists)
         tags_list = ['inlet','interface','outlet']
@@ -556,8 +568,10 @@ class DataNS(DataGenerator):
         solver (Solver): The solver object used for solving the Stokes equations.
         mesh (Mesh): The mesh object representing the computational domain.
         model_type (string): The type of model (stokes).
-        target_fields (string): The fields that will be predicted by the graph neural network (flowrate and pressure).
-        TDNodesData (dict): A dictionary containing the time-dependent data at each node.
+        target_fields (string): The fields that will be predicted 
+                                by the graph neural network (flowrate and pressure).
+        TDNodesData (dict): A dictionary containing the time-dependent data 
+                            at each node.
     """
 
     def __init__(self, solver, mesh):
@@ -642,7 +656,8 @@ class DataNS(DataGenerator):
         The data stored are the flowrate and the pressure at each node and at each time step.
 
         Returns:
-            A dictionary containing the flowrate and a dictionary containing the pressure, both at each node and at each time step.
+            A dictionary containing the flowrate and a dictionary containing 
+            the pressure, both at each node and at each time step.
         """
         td_dict_u = dict()
         td_dict_p = dict()
@@ -670,7 +685,8 @@ class DataNS(DataGenerator):
         """
         Saves the graph in a specified directory.
 
-        This function calls the save_graph method of the super class, passing the model_type and target_fields attributes.
+        This function calls the save_graph method of the super class, 
+        passing the model_type and target_fields attributes.
 
         Args:
             output_dir: The directory to save the graph in.
@@ -681,7 +697,8 @@ class DataNS(DataGenerator):
         """
         Generate JSON file containing information about the dataset.
 
-        The function calls the generate_json method of the super class, passing the model_type attributes.
+        The function calls the generate_json method of the super class, 
+        passing the model_type attributes.
 
         Arguments:
             output_dir (string): path to output directory
@@ -774,7 +791,8 @@ class DataHeat(DataGenerator):
         """
         Saves the graph in a specified directory.
 
-        This function calls the save_graph method of the super class, passing the model_type and fields_names attributes.
+        This function calls the save_graph method of the super class, 
+        passing the model_type and fields_names attributes.
 
         Args:
             output_dir: The directory to save the graph in.
@@ -785,7 +803,8 @@ class DataHeat(DataGenerator):
         """
         Generate JSON file containing information about the dataset.
 
-        The function calls the generate_json method of the super class, passing the model_type attributes.
+        The function calls the generate_json method of the super class, 
+        passing the model_type attributes.
 
         Arguments:
             output_dir (string): path to output directory

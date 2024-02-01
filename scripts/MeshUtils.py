@@ -268,7 +268,9 @@ class MeshLoader:
 
 
 """
-The main function launches the mesh creation and conversion. The mesh parameters can be set using the command line and the output directory and the filename can be set in the main function.
+The main function launches the mesh creation and conversion. 
+The mesh parameters can be set using the command line 
+and the output directory and the filename can be set in the main function.
 """
 if __name__ == "__main__":
 
