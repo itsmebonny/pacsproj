@@ -557,7 +557,6 @@ def parse_command_line_arguments():
                 'rate_noise': args.rate_noise,
                 'rate_noise_features': args.rate_noise_features,
                 'stride': args.stride,
-                # 'bcs_gnn': args.bcs_gnn,
                 'nout': args.nout,
                 'bc_type': args.bc_type,
                 'optimizer': args.optimizer
@@ -685,7 +684,7 @@ if __name__ == "__main__":
         print("MPI not supported. Running serially.")
 
     # 'synthetic' refers to the bcs, not the geometry
-    types_to_keep = []
+    
     target_features = ['flux']
     nodes_features = ['k','interface_length']
     edges_features = ['area', 'length']
@@ -697,6 +696,5 @@ if __name__ == "__main__":
 
     training(parallel, rank, 
              graphs_folder = graphs_folder, 
-             types_to_keep = types_to_keep, 
              features = features)
     sys.exit()

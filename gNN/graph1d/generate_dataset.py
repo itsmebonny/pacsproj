@@ -335,7 +335,6 @@ def generate_dataset(graphs, params, dataset_info, nchunks = 1):
 
         dataset_list.append({'train': train_dataset, 'test': test_dataset})
 
-    print('Generated {:} datasets'.format(len(dataset_list)))
     for dataset in dataset_list:
         print('Train size = {:}'.format(len(dataset['train'].graph_names)))
         print('Test size = {:}'.format(len(dataset['test'].graph_names)))

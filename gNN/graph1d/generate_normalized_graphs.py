@@ -152,9 +152,17 @@ def compute_statistics(graphs, fields, statistics):
                                     colour='green'):
                     graph = graphs[graph_n]
                     if etype == 'node':
-                        d = graph.ndata[field_name]
+                        try:
+                            d = graph.ndata[field_name]
+                        except KeyError:
+                            print(f"This node feature {field_name} is not in the dataset, please check the feature list")
+                            exit()
                     elif etype == 'edge':
-                        d = graph.edata[field_name]
+                        try:
+                            d = graph.ndata[field_name]
+                        except KeyError:
+                            print(f"This edge feature {field_name} is not in the dataset, please check the feature list")
+                            exit()
                     # elif etype == 'outlet_node':
                     #     mask = graph.ndata['outlet_mask'].bool()
                     #     d = graph.ndata[field_name][mask]
