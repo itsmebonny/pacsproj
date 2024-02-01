@@ -389,7 +389,8 @@ Finally, the mesh can be plotted using the \texttt{plot\_mesh(self)} method.
 
 \subsection{Solving the variational problem}
 
-This part of the code refers to the second step of the pipeline, which is the solution of the variational problem. To this purpose we implemented a \texttt{Solver} class, which is located in the \texttt{DataGenerator.py} file in the \texttt{scripts} folder. The structure of the class is shown in Figure \ref{solver_class}. 
+This part of the code refers to the second step of the pipeline, which consists in solving the variational problem and save the solution at each time step.
+To this purpose, we implemented a \texttt{Solver} class, which is located in the \texttt{DataGenerator.py} file in the \texttt{scripts} folder. The structure of the class is shown in Figure \ref{solver_class}. 
 
 \begin{figure}[H]
     \centering
@@ -399,7 +400,7 @@ This part of the code refers to the second step of the pipeline, which is the so
 \end{figure}
 
 As we can notice from the scheme, there is an abstract base class \texttt{Solver} which has two child classes: \texttt{Heat} and \texttt{Stokes}, that are used to solve the heat equation and the Stokes equation respectively. 
-In the code \ref{solver} we show the definition of the parent class, with the abstract methods that are overridden in the child classes.
+In the code \ref{solver} we show the definition of the parent class, were we can observe a constructor and three abstract methods. In particular, the constructor takes as input a \texttt{MeshLoader} object, which is useful to load the mesh considered in the problem to solve. The abstract methods are used to set the parameters of the problem, to solve it and to plot the solution, and they are all implemented in the child classes.
 
 \begin{lstlisting}[language=Python, caption={Solver class.}, label={solver}]
     class Solver(ABC):
@@ -420,26 +421,20 @@ In the code \ref{solver} we show the definition of the parent class, with the ab
             pass
 \end{lstlisting}
 
-
-
-The abstract base class \texttt{Solver} contains the following methods:
-\begin{itemize}
-    \item \texttt{\(\twound\)init\(\twound\)(self,mesh)}: costructor that takes as input a \texttt{MeshLoader} object 
-    \item \texttt{set\_parameters(self)}: abstract method to set the problem parameters
-    \item \texttt{solve(self)}: abstract method to solve the variational problem
-    \item \texttt{plot\_solution(self)}: abstract method to plot the solution
-\end{itemize}
-
-All the abstract method are overriden in the child classes \texttt{Heat} and \texttt{Stokes}. The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementing child classes that solve different equations, but with the same structure.
+The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementing child classes that solve different equations, but with the same structure.
 We focus on the description of the \texttt{Heat} class, since it is the one used in the test case, but the \texttt{Stokes} class is implemented analogously.
 
 The \texttt{Heat} class contains the following methods overridden from the parent class:
 \begin{itemize}
     \item \texttt{\(\twound\)init\(\twound\)(self,mesh, V, k, f, u0, dt, T, g, doplot=False)}: constructor which uses the \texttt{super()} function to inherit the base class constructor. The other problem parameters passed to the constructor are the function space, the diffusivity constant, the source term, the initial condition, the time step, the final step, the Neumann boundary condition at the inlet and a boolean variable to decide if the solution at each time step has to be plotted or not.
-    \item \texttt{set\_parameters(self,V,k,f,u0,dt,T,g)}: function to set different problem parameters
-    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method, imposing a non-homogeneous Neumann condition at the inlet boundary and no-flux condition at the walls and at the outlet. The temperature at each time step is stored in a numpy array, as well as the time instants. 
+    \item \texttt{set\_parameters(self,V,k,f,u0,dt,T,g)}: function to set different problem parameters.
+    \item \texttt{solve(self)}: this method solves the Heat equation using Discontinuous Galerkin method, imposing a non-homogeneous and time-dependent Neumann condition at the inlet boundary and no-flux condition at the walls and at the outlet. The temperature at each time step is stored as attribute of the object in a numpy array, as well as the time instants. 
     \item \texttt{plot\_solution(self,u)}: it takes as input the solution at a specific time step and it plots it.
 \end{itemize}
+
+\section{Graphs generation}
+
+When the variational problem is solved and the solution are saved, the next step of the pipeline is store store the quantities of interest of the problem and to generate a graph from these. To this purpose, we implemented the \texttt{DataGenerator} class, which is also located in the \texttt{DataGenerator.py} file in the \texttt{scripts} folder. The structure of the class can be obbserved in Figure \ref{datagenerator_class}. 
 
 \begin{figure}[H]
     \centering
@@ -448,33 +443,76 @@ The \texttt{Heat} class contains the following methods overridden from the paren
     \label{datagenerator_class}
 \end{figure}
 
-The second abstract base class \texttt{DataGenerator} is schematized in Figure \ref{datagenerator_class}.
+Also in this case, we have an abstract base class \texttt{DataGenerator} which has two child classes: \texttt{DataHeat} and \texttt{DataNS}, that are used to generate and store the data for the heat equation and the Stokes equation respectively.
+The \texttt{DataGenerator} base class contains some abstract method that will be overridden in the child classes, their definition is shown in the code \ref{datagenerator}, together with the class constructor. We can observe that the constructor takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object and a \texttt{NNodes} attribute is set as the sum of the number of inlets, outlets and interfaces of the mesh. The abstract method are used to compute some quantities of interest of the problem and to store the time dependent features, but they will be described in detail later.
 
-It contains the following methods:
+\begin{lstlisting}[language=Python, caption={Solver class.}, label={datagenerator}]
+    class DataGenerator(ABC):
+
+        def __init__(self, solver, mesh):
+            self.solver = solver
+            self.mesh = mesh
+            self.NNodes = len(self.mesh.tags['interface']) + \ 
+            len(self.mesh.tags['inlet']) + len(self.mesh.tags['outlet'])
+
+        @abstractmethod
+        def flux(self):
+            pass
+
+        @abstractmethod
+        def inlet_flux(self,tag, u):
+            pass
+
+        @abstractmethod
+        def td_nodes_data(self):
+            pass
+        
+\end{lstlisting}
+
+This class contains also some concrete methods, the followings are useful to store all the quantities necessary to generate the graphs:
 \begin{itemize}
-    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object. It saves \texttt{NNodes} as attribute of the object  which will be the number of nodes of the graph and it is set as the sum of the number of inlets, outlets and interfaces.
-    \item \texttt{flux(self)}: abstract method for the computation of the flux at the interfaces
-    \item \texttt{inlet\_flux(self)}: abstract method for the computation of the flux at the inlet
-    \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
     \item \texttt{nodes\_data(self)}: this function saves as attribute of the object a dictionary containing the time independent nodes features. The keys of the dictionary are strings with the name of the features and the values are numpy arrays containing the values at each node. The features considered for each node are the thermal diffusivity, the interface length where the node is located, the nodal type (inlet, outlet or branch node) and a global node ID.
-    \item \texttt{td\_nodes\_data(self)}: abstract method to save the time dependent nodes features.
     \item \texttt{create\_edges(self)}: it is used to save inside the object two numpy arrays as its attributes (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the node IDs of the source nodes of every edge and the node IDs of the destination nodes.
     \item \texttt{edges\_data(self)}: it stores as attributes of the object a dictionary containing the edge feature. The dictionary structure is analogous to the one of the node features. The features saved are the distance between the nodes connected by the edge and the area of the trapezoid corresponding to the edge.
+\end{itemize}
+
+Then we have two other concrete methods that are used to compute some time independent features of the graph related to the geometry of the mesh:
+\begin{itemize}
+    \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
     \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array of size \(NNodes \times 2\).
-    \item \texttt{save\_graph(self, output\_dir,fields\_names)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns a dgl graph which is generated calling the functions defined in \texttt{generate\_graphs.py}, that will be described in the next section. 
+\end{itemize}
+
+Finally, we have two concrete methods useful to generate the graph and to save it in a file:
+\begin{itemize}
+    \item \texttt{save\_graph(self, output\_dir,fields\_names)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns a dgl graph which is generated calling the functions defined in \texttt{generate\_graphs.py}, that will be described later in this section. 
     \item \texttt{generate\_json(output\_dir,model\_type)}: this function is used to generate and save in the output directory (that must be the directory containing the graphs) a json file containing information about the dataset. This file is necessary to make the dataset compatible with the gNN code. 
 \end{itemize}
 
-As for the \texttt{Solver} class, the abstract methods are overridden in the two child classes \texttt{DataNS}
-and \texttt{DataHeat}. The \texttt{DataHeat} class includes these methods:
+To summarize, this abstract class takes as input  object a \texttt{MeshLoader} object that contains the information about the mesh and a \texttt{Solver} object that contains the solution of the variational problem. Then, using the methods described above, all the necessary features are computed and stored in dictionaries. Finally, from these saved quantities the graph is generated and saved in file. 
+
+Now we can focus on the child classes and on the abstract methods.
+As for the \texttt{Solver} class, the abstract methods are overridden in the two child classes \texttt{DataNS} and \texttt{DataHeat}. 
+As above, we focun on the description of the \texttt{DataHeat} class, since it is the one used in the test case, but the \texttt{DataNS} class is implemented analogously. 
+
+First of all, the constructor of this child class is inherited from the parent class and two additional attributes are introduced: \texttt{model\_type} and \texttt{target\_fields}. The first one is a string containing the name of the equation considered, which is 'heat' in this case. The second one is a list containing the name of the target features of the graph (which are the features that the GNN has to predict). In this case the list contains only the string 'flux'. The constructor definition is shown in Code \ref{dataheat_constructor}.
+
+\begin{lstlisting}[language=Python, caption={Solver class.}, label={datagenerator}]
+    def __init__(self, solver, mesh):
+        super().__init__(solver, mesh)
+        self.model_type = "stokes"
+        self.target_fields = ['flowrate','pressure']
+\end{lstlisting}
+
+
 \begin{itemize}
-    \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor inherited from the parent class. Two additional attributes are introduced: \texttt{model\_type} and \texttt{target\_fields}. The first one is a string containing the name of the equation considered, which is 'heat' in this case. The second one is a list containing the name of the time dependent features of the graph, which we call 'target features' since they are the features that the GNN has to predict. In this case the list contains only the string 'flux'.
     \item \texttt{flux(self,tag,u)}: method overridden from the parent class, it computes the heat flux of the solution \(u\) at the interface corresponding to the tag passed as input.
     \item \texttt{inlet\_flux(self,tag,u)}: method overridden from the parent class, it computes the heat flux at the inlet. The solution \(u\) and the tag of the inlet boundary are passe as input. 
     \item \texttt{td\_nodes\_data(self)}: methos overridden from the parent class, it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as key the time instant and as value a numpy array containing the heat flux at that time instant at each node.
-    \item \texttt{save\_graphs(self, output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the inputs \texttt{fields\_names} and \texttt{model\_type} are the \texttt{target\_fields} and \texttt{model\_type} attributes of the object.
-    \item \texttt{generate\_json(self,output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the \texttt{model\_type} input is the homonymous attribute of the object.
+    
 \end{itemize}
+
+ \texttt{save\_graphs(self, output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the inputs \texttt{fields\_names} and \texttt{model\_type} are the \texttt{target\_fields} and \texttt{model\_type} attributes of the object.
+ \texttt{generate\_json(self,output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the \texttt{model\_type} input is the homonymous attribute of the object.
 
 The \texttt{DataNS} is build analogously, with the only difference that the time dependent features are the flow rate and the pressure instead of the heat flux. In this case, the \texttt{flux} and \texttt{inlet\_flux} method computes the flow rate at the interfaces and at the inlet respectively. In addition, the class has a method \texttt{outlet\_flux} that computes the flow rate at the outlet and two other methods, \texttt{mean\_pressure\_interface} and \texttt{mean\_pressure\_boundaries}, that compute the mean pressure at the interfaces and at the inlet and outlet boundaries respectively.
 
