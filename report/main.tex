@@ -106,7 +106,7 @@
 
 % Insert here the info that will be displayed into your Title page
 % -> title of your work
-\renewcommand{\title}{Title}
+\renewcommand{\title}{Solving PDEs using a Graph Neural Networks}
 
 % -> author name and surname
 \renewcommand{\author}{Andrea Bonifacio, Sara Gazzoni}
@@ -120,6 +120,34 @@
 %\newcommand{\secondcoadvisor}{Name Surname} % insert if any otherwise comment
 % -> academic year
 \newcommand{\YEAR}{2022-2023}
+\renewcommand{\lstlistingname}{Code}
+
+\usepackage{listings}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}    
+
+\lstset{style=mystyle}
 
 %-------------------------------------------------------------------------
 %	BEGIN OF YOUR DOCUMENT
@@ -142,22 +170,42 @@
 %-----------------------------------------------------------------------------
 
 \section{Introduction}
-Full 3D blood flow models are important in the study of the cardiovascular system since they allow one to extract detailed quantities of interest, but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this field because of their efficiency. An example is presented in \cite{Luca}, where a one-dimensional reduced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider the heat equation as test case, but the goal of the project is to show the potential extension of this approach to solve more difficult problems with complex geometries such as the simulations of proteins spreading in the neural system, which are at the basis of neurodegenerative diseases \cite{MattiaCorti}. The main part of this project is the implementation of a library for data generation used to train the graph neural network, and the adaptation of the code\footnote{The code can be found \href{https://github.com/StanfordCBCL/gROM}{here}.} used in the paper\cite{Luca} to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
+Full 3D blood flow models are important in the study of the cardiovascular system since they allow one to extract detailed quantities of interest, but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this field because of their efficiency. An example is presented in \cite{Luca}, where a one-dimensional reduced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider the heat equation as test case, but the goal of the project is to show the potential extension of this approach to solve more difficult problems with complex geometries such as the simulations of proteins spreading in the neural system, which are at the basis of neurodegenerative diseases \cite{MattiaCorti}. The main part of this project is the implementation of a library for data generation used to train the graph neural network, and the adaptation of the code\footnote{The code can be found \href{https://github.com/StanfordCBCL/gROM}{here}.} used in \cite{Luca} to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
 
 %-----------------------------------------------------------------------------
 % Problem
 %-----------------------------------------------------------------------------
 
 \section{Problem overview}
+\label{problem}
 
-% descrizione del problema generico Lu=F risolto con Fenics
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Images/schema.png}
+    \caption{Workflow of the project.}
+    \label{workflow}
+\end{figure}
+
+In this section we describe the problem formulation and the workflow of the project. The workflow is shown in Figure \ref{workflow} and it is composed by five steps that will be described in detail. 
+
+The first step of the pipeline is the generation of the meshes. We consider a set of 2D meshes with different geometries, which will be used to solve the variational problem in the following step.
+
+The second step consists in solving a variational problem in FEniCS \cite{FEniCS}, which is a Python platform for solving partial differential equations, particularly well suited for the finite element method.
 We consider a general time-dependent variational problem of the form:
-\[Lu=f\]
-with \(L\) a linear operator, \(f\) a source term and \(u\) the solution. Given a specific geometry \(\Omega\) and using the finite element method implemented in FEniCS, we can solve this problem and obtain the solution \(u^{n}\) at each time step \(n\). From this, we can generate a graph that describes the geometry of the problem and the solution, storing some values of interest as features of the nodes and the edges. By solving the problem for different geometries and different values of the parameters (e.g. the diffusivity constant) we can generate a dataset that will be used to train the graph neural network. 
+\[ \frac{\partial u}{\partial t} + Lu=f\]
+with \(L\) a linear operator, \(f\) a source term and \(u\) the solution. Given a specific geometry \(\Omega\) from the set of meshes generated in the previous phase, and a suitable time discretization, we obtain the solution \(u^{n}\) at each time step \(n\) by solving the problem using finite element method. In this step of the pipeline we also compute the quantities of interest that will be used to generate the graphs. 
 
-The graph neural network used in this project is the one presented in \cite{Luca}, which is an adaptation of the MeshGraphNet implementation \cite{MeshGraphNet}, and that we modified to make it suitable for our test case and extendable to other problems.
+In the next step, we generate the graphs using the data obtained from the previous step. A graph describes the geometry of the mesh and it is composed by nodes, located in the centerline of the mesh, and by edges connecting the nodes. The nodes and edges are characterized by different features, which are the quantities of interest computed in the precious step. Specifically, we have two types of features: time independent features, which are the same for all the time steps (e.g length of the edges, thermal diffusivity,..) and time dependent features, which are computed at each time step (e.g. heat flux, temperature,..). The latter are the features that we refer to also as `target features', since they are the values that the graph neural network has to predict.
 
-The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of all the nodes and edges features at that time step, and it predicts an update for the state variables (rollout phase). The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
+Summarizing these first three steps, we start from the generation of a set of meshes, then we solve the variational problem N times, varying the geometry and the parameters of the problem, and finally we generate N graphs from the data obtained by solving the variational problem. In this way, we obtain a dataset of N graphs that can be used to train the graph neural network. 
+
+The final two steps of the workflow are related to the training and the testing of a graph neural network. 
+The graph neural network considered in this project is the one proposed in \cite{Luca}, which is based on MeshGraphNet.
+MeshGraphNet is an innovative framework proposed by the Deepmind team to predict mesh-based simulation, in \cite{MeshGraphNet} it is used to predict cloth dynamics or structural deformation. In \cite{Luca} the idea is modified to be applied to graph reduction of 3D blood vessels. In this work, we follow the second adaptation and modify it to be able to work on any kind of graph-based representation of a mesh.
+
+We first focus on a brief description of how the graph neural network works, and then on the main characteristic of the training and testing phases.
+
+The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of the target features at that time step, and it predicts an update for the state variables (rollout phase). The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
 A forward step of the GNN is composed by three stages:
 \begin{enumerate}
     \item Encode: a latent representation of the node and edge features is computed using a fully connected neural network.
@@ -166,9 +214,10 @@ A forward step of the GNN is composed by three stages:
 \end{enumerate}
 After this forward step, the state variables can be updated as \(\Theta^{n+1} = \Theta^{n} + \delta\Theta^{n}\).
 
-We consider our dataset composed of \(G\) graphs, each of them consisting of a set of nodes \(n_1^g,...,n_{N^g}^g\), and we define as \(M^g\) the final time step of the \(g\)-th graph.
+In the training phase, the GNN is trained to predict this update on the dataset of graphs generated in the previous steps. 
+In particular, we consider a dataset composed of \(G\) graphs, each of them consisting of a set of nodes \(n_1^g,...,n_{N^g}^g\), and we define as \(M^g\) the final time step of the \(g\)-th graph.
 The neural network is trained on small strides \(s\) of consecutive timesteps since it has been proven to improve the accuracy of the predictions \cite{Luca}.
-The loss function minimized during the training is defines as:
+The loss function minimized during the training is defined as:
 \begin{equation}
     \mathcal{L} = \sum_{g \in \mathcal{T}} \frac{1}{|\mathcal{T}|(M^g-s)} \sum_{n=0}^{M^g-s} sMSE^{n,g,s},
 \end{equation}
@@ -178,17 +227,27 @@ where \(\mathcal{T}\) is the set of graphs used for training and \(sMSE\) is the
     \label{mse}
 \end{equation}
 In the above equation, \(a_l=1\) if \(l=1\) and \(a_l=0.5\) otherwise, \(\hat{\Theta}^{k+l,g}\) is the exact value of the nodal state variable at time step \(k+l\) of the \(g\)-th graph, and \(\Phi_l(\Theta^{k,g}|_i)\) is the approximation of \(\Theta\) at node \(i\) after \(l\) application of the GNN. 
-The loss function is optimized using the Adam optimizer.
+Another quantity considered during the trining is the metric, which is a strided mean absolute error defined, analogously to the loss function, as:
 
-During the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise. 
+\begin{equation}
+    \mathcal{M} = \sum_{g \in \mathcal{T}} \frac{1}{|\mathcal{T}|(M^g-s)} \sum_{n=0}^{M^g-s} \frac{1}{N^g} \sum_{l=1}^{s} \sum_{i=1}^{N^g} a_l |\hat{\Theta}^{k+l,g} - \Phi_l(\Theta^{k,g}|_i)|.
+    \label{metric}
+\end{equation}
+where the notation is the same as in Equation \eqref{mse}.
 
+In addition, during the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise. 
 It is important to make the graph neural network robust for rollouts of many time steps, since the error generated by the predictions is propagated at each time step. 
-For this reason, in addition to the loss function, to evaluate the performance of the network we compute also the rollout error, which is defined as: 
+For this reason, also a rollout error is considered during the training, which is defined as:
 
 \begin{equation}
     e^g = \frac{ \sum_{i=1}^{N^g} \sum_{k=11}^{M^g} (\hat{\Theta}_i^{k,g} -  \Phi_l(\Theta^{k,g}|_i))^2 }{ \sum_{i=1}^{N_g} \sum_{k=1}^{M^g} (\hat{\Theta}_i^{k,g})^2 }.
     \label{rollout}
 \end{equation}
+
+A more detailed desctiption of the training procedure can be found in Section \ref{gnn}. 
+
+The last block of the workflow is the testing of the trained network. In this phase, we consider as indicator of the accuracy of the network the rollour error defined in Equation \eqref{rollout}. 
+Moreover, the model is tested on the train and test set, but also on new graphs, which are generated using different meshes and different parameters of the variational problem. 
 
 
 \subsection{Test case: heat equation}
@@ -269,9 +328,12 @@ The folders and files in the repository are organized as follows:
     \item[\faFileO] \textbf{README.md}: this file contains a brief description of the repository and the instructions to run the code.
 \end{itemize}
 
+In this section, we describe in detail the code implementation related to each block of the workflow presented in Section \ref{problem}.
+
 \subsection{Mesh creation}
 
-The \texttt{MeshUtils.py} file in the scripts folder is responsible for creating 2D meshes. It contains two classes whose structure in shown in Figure \ref{mesh_class}. The first one is \texttt{MeshCreator} which is used to create meshes using \texttt{gmsh}, while the second one is  \texttt{MeshLoader} which is used to load the meshes from a \texttt{.xml} file and extract all the features that will be used to solve the variational problem.
+The first step is the generation of the meshes, the code responsible for this part is the \texttt{MeshUtils.py} file in the \texttt{scripts} folder.
+It contains two classes whose structure in shown in Figure \ref{mesh_class}. The first one is \texttt{MeshCreator} which is used to create meshes using \texttt{gmsh}, while the second one is  \texttt{MeshLoader} which is used to load the meshes from a \texttt{.xml} file and extract all the features that will be used to solve the variational problem.
 
 \begin{figure}[H]
     \centering
@@ -325,10 +387,9 @@ Then the class has the \texttt{measure\_definition(self)} method: it return thre
 
 Finally, the mesh can be plotted using the \texttt{plot\_mesh(self)} method.
 
-\subsection{Data generation}
+\subsection{Solving the variational problem}
 
-\texttt{GenerateData.py} is located in the \texttt{scripts} folder and it is structured to hold two abstract classes used to generate child classes: \texttt{Solver} and \texttt{DataGenerator}. The first one is used to solve the variational problem, while the second one is designed to store all the quantities of interest which will be used to build the graphs. Each of these parent classes has two child classes: we start describing the solver one.
-A diagram of the \texttt{Solver} class structure and methods is shown in Figure \ref{solver_class}.
+This part of the code refers to the second step of the pipeline, which is the solution of the variational problem. To this purpose we implemented a \texttt{Solver} class, which is located in the \texttt{DataGenerator.py} file in the \texttt{scripts} folder. The structure of the class is shown in Figure \ref{solver_class}. 
 
 \begin{figure}[H]
     \centering
@@ -337,15 +398,39 @@ A diagram of the \texttt{Solver} class structure and methods is shown in Figure 
     \label{solver_class}
 \end{figure}
 
+As we can notice from the scheme, there is an abstract base class \texttt{Solver} which has two child classes: \texttt{Heat} and \texttt{Stokes}, that are used to solve the heat equation and the Stokes equation respectively. 
+In the code \ref{solver} we show the definition of the parent class, with the abstract methods that are overridden in the child classes.
+
+\begin{lstlisting}[language=Python, caption={Solver class.}, label={solver}]
+    class Solver(ABC):
+    
+        def __init__(self,mesh):
+            self.mesh = mesh
+
+        @abstractmethod 
+        def set_parameters(self):
+            pass 
+
+        @abstractmethod 
+        def solve(self):
+            pass 
+
+        @abstractmethod 
+        def plot_solution(self):
+            pass
+\end{lstlisting}
+
+
+
 The abstract base class \texttt{Solver} contains the following methods:
 \begin{itemize}
     \item \texttt{\(\twound\)init\(\twound\)(self,mesh)}: costructor that takes as input a \texttt{MeshLoader} object 
-    \item \texttt{set\_parameters(self)}: abstract method
-    \item \texttt{solve(self)}: abstract method
-    \item \texttt{plot\_solution(self)}: abstract method
+    \item \texttt{set\_parameters(self)}: abstract method to set the problem parameters
+    \item \texttt{solve(self)}: abstract method to solve the variational problem
+    \item \texttt{plot\_solution(self)}: abstract method to plot the solution
 \end{itemize}
 
-All the abstract method are overriden in the child classes \texttt{Heat} and \texttt{Stokes}. The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementing child classes that solve different equations, but with the same structure. 
+All the abstract method are overriden in the child classes \texttt{Heat} and \texttt{Stokes}. The choice of a parent abstract class for the solver is useful because it allows to use the same code for different problems, implementing child classes that solve different equations, but with the same structure.
 We focus on the description of the \texttt{Heat} class, since it is the one used in the test case, but the \texttt{Stokes} class is implemented analogously.
 
 The \texttt{Heat} class contains the following methods overridden from the parent class:
@@ -368,11 +453,11 @@ The second abstract base class \texttt{DataGenerator} is schematized in Figure \
 It contains the following methods:
 \begin{itemize}
     \item \texttt{\(\twound\)init\(\twound\)(self,solver,mesh)}: constructor that takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object. It saves \texttt{NNodes} as attribute of the object  which will be the number of nodes of the graph and it is set as the sum of the number of inlets, outlets and interfaces.
-    \item \texttt{flux(self)}: abstract method 
-    \item \texttt{inlet\_flux(self)}: abstract method
+    \item \texttt{flux(self)}: abstract method for the computation of the flux at the interfaces
+    \item \texttt{inlet\_flux(self)}: abstract method for the computation of the flux at the inlet
     \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
     \item \texttt{nodes\_data(self)}: this function saves as attribute of the object a dictionary containing the time independent nodes features. The keys of the dictionary are strings with the name of the features and the values are numpy arrays containing the values at each node. The features considered for each node are the thermal diffusivity, the interface length where the node is located, the nodal type (inlet, outlet or branch node) and a global node ID.
-    \item \texttt{td\_nodes\_data(self)}: abstract method
+    \item \texttt{td\_nodes\_data(self)}: abstract method to save the time dependent nodes features.
     \item \texttt{create\_edges(self)}: it is used to save inside the object two numpy arrays as its attributes (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the node IDs of the source nodes of every edge and the node IDs of the destination nodes.
     \item \texttt{edges\_data(self)}: it stores as attributes of the object a dictionary containing the edge feature. The dictionary structure is analogous to the one of the node features. The features saved are the distance between the nodes connected by the edge and the area of the trapezoid corresponding to the edge.
     \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array of size \(NNodes \times 2\).
@@ -521,8 +606,8 @@ For more details about the running instructions, to know about the packages requ
 \label{results}
 In this section we show the results on the test case described in the section \ref{testcase}. 
 In Figure \ref{loss} the performance of the model is shown in terms of loss and metric during the training. 
-The loss function considered is the one defined in equation \ref{mse}, while the metric is the mean absolute error between the model's predictions and the real data. 
-Moreover, the rollout error's behavior is shown in Figure \ref{rollout_plot} and it is computed as in Equation \ref{rollout} on a graph randomly selected in the dataset and at some random epochs. We can observe that the loss and the methic decreases during the training as expected, while the rollout error is not monotonically decreasing. This is due to the fact that the rollout error is computed on a single graph so it is not a good indicator of the model's performance.
+The loss function considered is the one defined in equation \eqref{mse}, while the metric is the mean absolute error between the model's predictions and the real data. 
+Moreover, the rollout error's behavior is shown in Figure \ref{rollout_plot} and it is computed as in Equation \eqref{rollout} on a graph randomly selected in the dataset and at some random epochs. We can observe that the loss and the metric decreases during the training as expected, while the rollout error is not monotonically decreasing. This is due to the fact that the rollout error is computed on a single graph so it is not a good indicator of the model's performance.
 In Table \ref{errors} we show the final rollout errors on the training and the test set, which are computed as the average of the rollout errorr on all the graphs in the dataset.
 
 % immagini da aggiornare con quelle del modello finale
