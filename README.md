@@ -10,6 +10,7 @@ We divided the code into three main folders:
 - `scripts`: contains the scripts for the generation of the data;
 - `gNN`: contains the code for the implementation of the GNN;
 - `notebooks`: contains some example notebooks to test the library.
+- `models`: contains some already trained models.
 
 ### Prerequisites
 
@@ -113,6 +114,12 @@ python gNN/network1d/tester.py $MODELPATH
 ```
 
 where `$MODELPATH` is the path to the folder containing the trained model. The script will compute the errors for all the train and test geometries.
+
+If the user wants to test an already trained model, he can use the model that is already present in the `models` folder. In that case, simply run the command
+
+```python
+python gNN/network1d/tester.py models/trained_model
+```
 
 ### Notebooks
 
