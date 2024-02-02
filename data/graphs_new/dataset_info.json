@@ -1,0 +1,54 @@
+{
+  "k_108.65": {
+    "model_type": "heat_eq",
+    "mu": "108.65"
+  },
+  "k_124.1": {
+    "model_type": "heat_eq",
+    "mu": "124.1"
+  },
+  "k_188.41": {
+    "model_type": "heat_eq",
+    "mu": "188.41"
+  },
+  "k_197.44": {
+    "model_type": "heat_eq",
+    "mu": "197.44"
+  },
+  "k_200.67": {
+    "model_type": "heat_eq",
+    "mu": "200.67"
+  },
+  "k_225.09": {
+    "model_type": "heat_eq",
+    "mu": "225.09"
+  },
+  "k_231.96": {
+    "model_type": "heat_eq",
+    "mu": "231.96"
+  },
+  "k_268.42": {
+    "model_type": "heat_eq",
+    "mu": "268.42"
+  },
+  "k_3.05": {
+    "model_type": "heat_eq",
+    "mu": "3.05"
+  },
+  "k_35.36": {
+    "model_type": "heat_eq",
+    "mu": "35.36"
+  },
+  "k_5.04": {
+    "model_type": "heat_eq",
+    "mu": "5.04"
+  },
+  "k_58.04": {
+    "model_type": "heat_eq",
+    "mu": "58.04"
+  },
+  "k_67.44": {
+    "model_type": "heat_eq",
+    "mu": "67.44"
+  }
+}

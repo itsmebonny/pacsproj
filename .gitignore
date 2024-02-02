@@ -1,6 +1,8 @@
 data/*
 !data/graphs
 !data/graphs/*
+!data/graphs_new
+!data/graphs_new/*
 !data/mesh
 !data/mesh/*
 models/*
