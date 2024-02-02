@@ -6,8 +6,8 @@ data/*
 !data/mesh_train
 !data/mesh_train/*
 models/*
-!models/model_trained
-!models/model_trained/*
+!models/trained_model
+!models/trained_model/*
 __pycache__
 .vscode
 GNN.code-workspace

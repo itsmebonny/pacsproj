@@ -89,8 +89,8 @@ def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
     return tot_errs_normalized/N, tot_errs/N, tot_cont_loss/N
         #    total_time / N, total_timesteps / N
 
-def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm/', 
-                       data_location = 'data/'):
+def get_gnn_and_graphs(path, graphs_folder = 'graphs_train', 
+                       data_location = 'data'):
 
     """
     Get GNN and list of graphs given the path to a saved model folder.
@@ -127,7 +127,8 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm/',
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features,
                 'target_features': target_features}
-    graphs, _  = gng.generate_normalized_graphs(data_location + graphs_folder,
+    graphpath = os.path.join(data_location, graphs_folder)
+    graphs, _  = gng.generate_normalized_graphs(graphpath,
                                                 params['statistics']
                                                       ['normalization_type'],
                                                 params['bc_type'],
@@ -136,7 +137,7 @@ def get_gnn_and_graphs(path, graphs_folder = 'graphs_rm/',
 
     return gnn_model, graphs, params
 
-def get_dataset_and_gnn(path, graphs_folder = 'graphs_rm/', data_location = 'data/'):
+def get_dataset_and_gnn(path, graphs_folder = 'graphs_train', data_location = 'data'):
     """
     Get datasets and GNN given the path to a saved model folder.
 
@@ -197,12 +198,12 @@ def plot_predictions(dataset, split_name, gnn_model, params, graph_idx=-1):
         plt.legend(['prediction', 'real'])
         plt.xlabel('time steps')
         plt.ylabel('heat flux')
-        plt.title('node ' + str(node))
+        plt.title(f'node {node}')
         plt.show()
 
     return errs
 
-def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new/', data_location = 'data/'):
+def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new', data_location = 'data'):
     """
     Test a saved model on new graphs.
 

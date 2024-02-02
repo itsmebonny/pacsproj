@@ -69,8 +69,7 @@ class SignalHandler(object):
             frm: unused argument from overwritten method
 
         """
-        res = input("Do you want to exit training?" + \
-                        "Model and statistics will be saved (y/n)")
+        res = input("Do you want to exit training? (y/n)")
         if res == "y":
             self.should_exit = True
             # exit without saving
@@ -603,7 +602,7 @@ def get_graphs_params(label_normalization, types_to_keep,
 
     return graphs, params, info
 
-def training(parallel, rank = 0, graphs_folder = 'graphs_rm/', 
+def training(parallel, rank = 0, graphs_folder = 'graphs_train', 
              data_location = io.data_location(),
              types_to_keep = None,
              features = None):
@@ -692,7 +691,7 @@ if __name__ == "__main__":
                 'edges_features': edges_features,
                 'target_features': target_features}
     
-    graphs_folder = 'graphs_rm/'
+    graphs_folder = 'graphs_train'
 
     training(parallel, rank, 
              graphs_folder = graphs_folder, 

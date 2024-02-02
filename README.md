@@ -65,7 +65,7 @@ The library is built to solve the following problems:
 - Heat diffusion
 - Stokes problem
 
-There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The scripts are `scripts/HeatDatasetGen.py` and `scripts/StokesDatasetGen.py`. These two scripts solve the two problems and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the directory in which the mesh are stored modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem. The script that solves Stokes is here just as a proof of concept, as it should need a few tweaks in order to solve the problem correctly.
+There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The script is `scripts/HeatDatasetGen.py`. This script solves the problem and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the directory in which the mesh are stored modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem.
 
 To run the script, the user can run the command
 
@@ -104,7 +104,7 @@ The user can modify the parameters of the training in the `main` function by add
 - `--learning_rate`: learning rate of the optimizer;
 - `--batch_size`: batch size;
 - `--lr_decay`: learning rate decay;
-- `--nepochs`: number of epochs;
+- `--epochs`: number of epochs;
 - `--weight_decay`: weight decay;
 - `--rate_noise`: rate of noise to add to the target features;
 - `--rate_noise_features`: rate of noise to add to the other features;
@@ -139,6 +139,7 @@ To facilitate the use of the library, we prepared some notebooks that show how t
 - `notebooks/ModelTester.ipynb`: notebook that, given a model already trained, shows how to test it on the train and test geometries;
 
 These notebooks can be used out of the box, without any modification by simply running all the cells. The dataset generation notebooks work the same as the scripts already presented, so the interested reader can refer to the previous sections for further information.
+The notebook that solves Stokes is here just as a proof of concept, as it should need a few tweaks in order to solve the problem correctly.
 
 The model tester notebook shows how to test a model on the train and test geometries. The user can modify the variable `path` to choose the model to test. The notebook will compute the errors for all the train and test geometries. It is also possible to test the network on a single geometry by modifying the variable `graphs_folder` to the path of the folder containing the graphs of the geometry to test and the variable `new_graph` to the name of the graph to test.
 

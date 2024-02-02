@@ -116,7 +116,8 @@ def load_graphs(input_dir):
     graphs = dict()
     for file in tqdm(files, desc = 'Loading graphs', colour='green'):
         if 'grph' in file:
-            graphs[file] = lg(input_dir + file)[0][0]
+            filepath = os.path.join(input_dir, file)
+            graphs[file] = lg(filepath)[0][0]
 
     return graphs
 
