@@ -432,9 +432,9 @@ The \texttt{Heat} class contains the following methods overridden from the paren
     \item \texttt{plot\_solution(self,u)}: it takes as input the solution at a specific time step and it plots it.
 \end{itemize}
 
-\section{Graphs generation}
+\subsection{Graphs generation}
 
-When the variational problem is solved and the solution are saved, the next step of the pipeline is store store the quantities of interest of the problem and to generate a graph from these. To this purpose, we implemented the \texttt{DataGenerator} class, which is also located in the \texttt{DataGenerator.py} file in the \texttt{scripts} folder. The structure of the class can be obbserved in Figure \ref{datagenerator_class}. 
+When the variational problem is solved and the solution are saved, the next step of the pipeline is to store the quantities of interest of the problem and to generate a graph from these. To this purpose, we implemented the \texttt{DataGenerator} class, which is also located in the \texttt{DataGenerator.py} file in the \texttt{scripts} folder. The structure of the class can be obbserved in Figure \ref{datagenerator_class}. 
 
 \begin{figure}[H]
     \centering
@@ -444,7 +444,7 @@ When the variational problem is solved and the solution are saved, the next step
 \end{figure}
 
 Also in this case, we have an abstract base class \texttt{DataGenerator} which has two child classes: \texttt{DataHeat} and \texttt{DataNS}, that are used to generate and store the data for the heat equation and the Stokes equation respectively.
-The \texttt{DataGenerator} base class contains some abstract method that will be overridden in the child classes, their definition is shown in the code \ref{datagenerator}, together with the class constructor. We can observe that the constructor takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object and a \texttt{NNodes} attribute is set as the sum of the number of inlets, outlets and interfaces of the mesh. The abstract method are used to compute some quantities of interest of the problem and to store the time dependent features, but they will be described in detail later.
+The \texttt{DataGenerator} base class contains some abstract method that will be overridden in the child classes, their definition is shown in the code \ref{datagenerator}, together with the class constructor. We can observe that the constructor takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object and a \texttt{NNodes} attribute which is set as the sum of the number of inlets, outlets and interfaces of the mesh. The abstract method are used to compute some quantities of interest of the problem and to store the time dependent features, but they will be described in detail later.
 
 \begin{lstlisting}[language=Python, caption={Solver class.}, label={datagenerator}]
     class DataGenerator(ABC):
@@ -469,7 +469,7 @@ The \texttt{DataGenerator} base class contains some abstract method that will be
         
 \end{lstlisting}
 
-This class contains also some concrete methods, the followings are useful to store all the quantities necessary to generate the graphs:
+This class contains also some concrete methods, the followings are useful to store all the node and edge features necessary to generate the graphs:
 \begin{itemize}
     \item \texttt{nodes\_data(self)}: this function saves as attribute of the object a dictionary containing the time independent nodes features. The keys of the dictionary are strings with the name of the features and the values are numpy arrays containing the values at each node. The features considered for each node are the thermal diffusivity, the interface length where the node is located, the nodal type (inlet, outlet or branch node) and a global node ID.
     \item \texttt{create\_edges(self)}: it is used to save inside the object two numpy arrays as its attributes (\texttt{self.edges1} and \texttt{self.edges2}) containing respectively the node IDs of the source nodes of every edge and the node IDs of the destination nodes.
@@ -481,44 +481,49 @@ Then we have two other concrete methods that are used to compute some time indep
     \item \texttt{area(self,tag)}: concrete method that computes the area of the trapezoid corresponding to the tag passed as input 
     \item \texttt{centerline(self)}: this function computes the coordinates of the graph nodes, which are the coordinates of the centerline of the mesh at the interfaces. These coordinates are stored in a numpy array of size \(NNodes \times 2\).
 \end{itemize}
+These two function are called inside the \texttt{nodes\_data} and \texttt{edges\_data} methods to save the corresponding features.
 
-Finally, we have two concrete methods useful to generate the graph and to save it in a file:
-\begin{itemize}
-    \item \texttt{save\_graph(self, output\_dir,fields\_names)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saves. It returns a dgl graph which is generated calling the functions defined in \texttt{generate\_graphs.py}, that will be described later in this section. 
-    \item \texttt{generate\_json(output\_dir,model\_type)}: this function is used to generate and save in the output directory (that must be the directory containing the graphs) a json file containing information about the dataset. This file is necessary to make the dataset compatible with the gNN code. 
-\end{itemize}
+Finally, we have a concrete methods useful to generate the graph and to save it in a file which is called \texttt{save\_graph(self, output\_dir,fields\_names)}: this method takes as input the name of the time dependent features of the graphs and the output directory where the graph has to be saved. It returns a dgl graph which is generated calling the functions defined in \texttt{generate\_graphs.py}, that will be described later in this section. 
 
-To summarize, this abstract class takes as input  object a \texttt{MeshLoader} object that contains the information about the mesh and a \texttt{Solver} object that contains the solution of the variational problem. Then, using the methods described above, all the necessary features are computed and stored in dictionaries. Finally, from these saved quantities the graph is generated and saved in file. 
+The last method of the class is \texttt{generate\_json(output\_dir,model\_type)}: this function is used when a set of graphs is already saved in a directory. It is used to generate and save in the output directory (that must be the directory containing the graphs) a json file containing information about the dataset. This file is necessary to make the dataset compatible with the gNN code. 
+
+To summarize, this abstract class takes as input a \texttt{MeshLoader} object that contains the information about the mesh and a \texttt{Solver} object that contains the solution of the variational problem. Then, using the methods described above, all the necessary features are computed and stored in dictionaries. Finally, from these saved quantities a graph is generated and saved in file. 
 
 Now we can focus on the child classes and on the abstract methods.
 As for the \texttt{Solver} class, the abstract methods are overridden in the two child classes \texttt{DataNS} and \texttt{DataHeat}. 
-As above, we focun on the description of the \texttt{DataHeat} class, since it is the one used in the test case, but the \texttt{DataNS} class is implemented analogously. 
+As above, we focus on the description of the \texttt{DataHeat} class, since it is the one used in the test case, but the \texttt{DataNS} class is implemented analogously. 
 
 First of all, the constructor of this child class is inherited from the parent class and two additional attributes are introduced: \texttt{model\_type} and \texttt{target\_fields}. The first one is a string containing the name of the equation considered, which is 'heat' in this case. The second one is a list containing the name of the target features of the graph (which are the features that the GNN has to predict). In this case the list contains only the string 'flux'. The constructor definition is shown in Code \ref{dataheat_constructor}.
 
-\begin{lstlisting}[language=Python, caption={Solver class.}, label={datagenerator}]
+\begin{lstlisting}[language=Python, caption={Solver class.}, label={dataheat_constructor}]
     def __init__(self, solver, mesh):
         super().__init__(solver, mesh)
-        self.model_type = "stokes"
-        self.target_fields = ['flowrate','pressure']
+        self.model_type = "heat"
+        self.target_fields = ['flux']
 \end{lstlisting}
 
+Then we can describe the implementation of the abstract methods whose definition was shown in the code \ref{datagenerator}. 
+Firstly, the \texttt{flux(self,tag,u)} and \texttt{inlet\_flux(self,tag,u)} are two methods that compute the heat flux at the interfaces and at the inlet respectively, given the solution \(u\) at a specific time step and the tag of the interface or the inlet boundary. 
 
-\begin{itemize}
-    \item \texttt{flux(self,tag,u)}: method overridden from the parent class, it computes the heat flux of the solution \(u\) at the interface corresponding to the tag passed as input.
-    \item \texttt{inlet\_flux(self,tag,u)}: method overridden from the parent class, it computes the heat flux at the inlet. The solution \(u\) and the tag of the inlet boundary are passe as input. 
-    \item \texttt{td\_nodes\_data(self)}: methos overridden from the parent class, it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as key the time instant and as value a numpy array containing the heat flux at that time instant at each node.
+Then, there is the \texttt{td\_nodes\_data(self)} method: it stores as attribute of the object the time dependent nodes features in a dictionary. In this case the only time dependent feature is the heat flux: the dictionary has as keys the time instants and as value for each key a numpy array containing the heat flux at that time instant at each node.
+
+Finally, in this class we define as shown in Code \ref{dataheat_save} the \texttt{save\_graph(self, output\_dir,fields\_names)} method and the \texttt{generate\_json(output\_dir,model\_type)} method. The first one invokes the corresponding method of the parent class using the \texttt{super()} function, but the input \texttt{fields\_names} is the \texttt{target\_fields} attribute of the object. In the same way, the second method invokes the corresponding method of the parent class and the \texttt{model\_type} input is the homonymous attribute of the object.
+
+\begin{lstlisting}[language=Python, caption={Definition of the \texttt{save\_graph} and \texttt{generate\_json} methods of the \texttt{DataHeat} class.}, label={dataheat_save}]
     
-\end{itemize}
+def save_graph(self, output_dir):
 
- \texttt{save\_graphs(self, output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the inputs \texttt{fields\_names} and \texttt{model\_type} are the \texttt{target\_fields} and \texttt{model\_type} attributes of the object.
- \texttt{generate\_json(self,output\_dir)}: method that invokes the corresponding method of the parent class using the \texttt{super()} function, but the \texttt{model\_type} input is the homonymous attribute of the object.
+    return super().save_graph(output_dir,self.target_fields)
+
+def generate_json(self,output_dir):
+
+    return super().generate_json(output_dir,self.model_type)
+\end{lstlisting}
 
 The \texttt{DataNS} is build analogously, with the only difference that the time dependent features are the flow rate and the pressure instead of the heat flux. In this case, the \texttt{flux} and \texttt{inlet\_flux} method computes the flow rate at the interfaces and at the inlet respectively. In addition, the class has a method \texttt{outlet\_flux} that computes the flow rate at the outlet and two other methods, \texttt{mean\_pressure\_interface} and \texttt{mean\_pressure\_boundaries}, that compute the mean pressure at the interfaces and at the inlet and outlet boundaries respectively.
 
-\subsection{Graph generation}
-
-In this section we describe the functions defined in \texttt{generate\_graphs.py}, included in the \texttt{scripts} folder, that are used to generate a dgl graph from the data obtained from the \texttt{DataGenerator} class. This file contains three functions: 
+Now we can describe the functions defined in \texttt{generate\_graphs.py}, included in the \texttt{scripts} folder. This file contains useful functions to generate the graphs from the features saved by the \texttt{DataGenerator} class.
+The functions are the following: 
 \begin{itemize}
     \item \texttt{generate\_graph(point\_data, points, edges\_data, edges1, edges2)}: this function takes as input a dictionary containing the time independent node features, a numpy array with the node coordinates, a dictionary containing the edge features and two numpy arrays containing the source and destination nodes of the edges. It return a dgl graph with the node and edge features stored as pytorch tensors.
     \item \texttt{add\_fields(graph, field, field\_name, offset=0)}: function to add a time dependent feature to the dgl graph. It take as input the dgl graph, a dictionary containing the field values at each time step, the name of the field to insert and an offset with the number of time steps to skip. It returns the dgl graph with the new field added.
@@ -527,10 +532,14 @@ In this section we describe the functions defined in \texttt{generate\_graphs.py
 
 All this function are invoked by the \texttt{save\_graph} method of the \texttt{DataGenerator} class, in this way a graph with all the necessary features is generated and saved in the output directory.
 
+To conclude, all the classes and function described in this section are useful to save the quantities of interest of a variational problem and to generate a graph from these. This process, from solving a problem to generating a graph, can be repeated a proper number of times to generate a dataset of graphs. 
+So, thanks to the implementation explained above, a dataset can be generate and used to train a graph neural network.
+
 \subsection{Graph Neural Network}
 \label{gnn}
 
-In this section we describe the code of the graph neural network, located in the \texttt{gNN} folder. Since the code was already implemented and we just made some modifications, we will not describe it in detail, but we will focus on the changes we made and on the more relevant parts of the code, which are inside the \texttt{network1D} folder.
+In this section we describe the code of the graph neural network, located in the \texttt{gNN} folder. This part of the code refers to the last two blocks of the our wotkflow, which are the training and the testing of the network.
+Since the code was already implemented and we just made some modifications, we will not describe it in detail, but we will focus on the changes we made and on the more relevant parts of the code, which are inside the \texttt{network1D} folder.
 
 \subsubsection*{Code Structure}
 To better understand the behavior of the network, it is necessary to look at its inner mechanisms. 
@@ -617,13 +626,13 @@ In this file, we implemented two additional functions:
 \end{itemize}
 
 \subsection{Notebooks}
-To conclude the description of the code, we briefly explain the content of the notebooks in the \texttt{notebooks} folder. 
+To conclude the description of the code, we briefly explain the content of the notebooks in the \texttt{notebooks} folder. In this folder, there are some useful notebook that can be used to reproduce the results of this work or to generate new datasets easily.
 
 Firstly, there is the \texttt{HeatDatasetGen.ipynb} notebook, which is used to generate a dataset based on the Heat equation, as our test case. Inside this notebook, a random mesh is loaded from a given folder and the variational problem is solved using the \texttt{Heat} class, given a random diffusivity constant and the other parameters of the problem. Then, a graph is generated using the \texttt{DataHeat} class and it is saved in output directory. This process is repeated for a given number of times, in order to generate a dataset of graphs. Finally, the json file containing the information about the dataset is generated and saved in the same output directory. 
 
-% Stokes notebook dobbiamo decidere se metterlo e cosa scriverci
+Then, there is the \texttt{StokesDatasetGen.ipynb} notebook, which is similar to the previous one, but the problem considered is the Stokes equation, so the corresponding classes are used. We did not use this notebook in our work and we did not focus on this part of the code, so the parameters of the variational problem in this notebook are just an example to show the possibility to consider a different problem with respect to the one considered in the test case.
 
-Then, there is the \texttt{ModelTester.ipynb} which can be used to evaluate a trained model. In this notebook, it is necessary to specify the path to the model folder and the path to the proper dataset folder. In this way, the model and the dataser are both loaded and it is possible to visualize the predictions of the model on the graphs of the dataset and on new graphs from a different folder. It is also possible to display the average rollout errors on the train and test sets. All of this is done using the functions implemented in the \texttt{tester.py} file.
+Finally, there is the \texttt{ModelTester.ipynb} which can be used to evaluate a trained model. In this notebook, it is necessary to specify the path to the model folder and the path to the proper dataset folder. In this way, the model and the dataser are both loaded and it is possible to visualize the predictions of the model on the graphs of the dataset and on new graphs from a different folder. It is also possible to display the average rollout errors on the train and test sets. All of this is done using the functions implemented in the \texttt{tester.py} file.
 
 \section{Running instructions}
 
@@ -729,7 +738,7 @@ This could be due to the fact that with a lower diffusivity constant the values 
 %-----------------------------------------------------------------------------
 
 
-\section{Further work and possible extensions}
+\section{Conclusions and further work}
 In this work, we focused on the implementation of an environment able to generate everything needed to train the Graph Neural Network and to test it on new graphs. One of the main modifications that we made to the original code is the possibility to train the network on different problems, such as the heat equation and the Stokes equation, but potentially any time dependent problem.
 However, there are still some limitations that could be fixed. One could be a deeper rewrite of the GNN code, which was built around a specific problem, and it is not very flexible. Also, our model is not very robust and couldn't be used to solve any real problem. One of its weaknesses is that we trained it on a very specific and simple problem, with a dataset that has little variability. This could be solved in a number of ways.
 First, in the dataset generation the variability of the dataset can be increased simply by changing the parameters of the mesh creation (for example considering not equally spaced interfaces or a higher number of interfaces) and also by changing other parameters of the problem in addition to the diffusivity constant (such as the inlet condition). 
