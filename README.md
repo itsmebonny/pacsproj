@@ -46,7 +46,7 @@ The library is able to create meshes, solve variational problems, save them in a
 
 #### Mesh generation
 
-The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside the script, one can modify the variables `filename` (default: `mesh`) and `output_dir` (default: `data/mesh`) to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
+The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside the `main` function of the script, one can modify the variables `filename` (default: `mesh`) and `output_dir` (default: `data/mesh`) to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
 
 - `--nmesh`: number of meshes to generate;
 - `--interfaces`: number of the interfaces inside the mesh;
