@@ -83,7 +83,7 @@ class Stokes(Solver):
         pt (numpy.ndarray): Array of pressure solutions at each time step.
     """
 
-    def __init__(self, mesh, V, Q, rho, mu, U0, L0, inflow, f, dt, T, k, doplot=False):
+    def __init__(self, mesh, V, Q, Re, inflow, f, dt, T, doplot=False):
         """
         Initialize the GenerateData class.
 
@@ -104,10 +104,7 @@ class Stokes(Solver):
         super().__init__(mesh)
         self.V = V
         self.Q = Q
-        self.rho = rho
-        self.mu = mu
-        self.U0 = U0
-        self.L0 = L0
+        self.k = Re
         self.inflow = inflow
         self.f = f
         self.dt = dt
@@ -115,15 +112,14 @@ class Stokes(Solver):
         self.doplot = doplot
 
 
-    def set_parameters(self, V, Q, rho, mu, U0, L0, inflow, f, dt, T):
+    def set_parameters(self, V, Q, Re, inflow, f, dt, T):
         """
         Set the parameters for the simulation.
 
         Args:
             V (float): Velocity of the fluid.
             Q (float): Flow rate of the fluid.
-            rho (float): Density of the fluid.
-            mu (float): Viscosity of the fluid.
+            nu (float): Kynematic viscosity of the fluid.
             U0 (float): Initial velocity of the fluid.
             L0 (float): Initial length of the fluid.
             inflow (float): Inflow rate of the fluid.
@@ -133,10 +129,7 @@ class Stokes(Solver):
         """
         self.V = V
         self.Q = Q
-        self.rho = rho
-        self.mu = mu
-        self.U0 = U0
-        self.L0 = L0
+        self.k = Re
         self.inflow = inflow
         self.f = f
         self.dt = dt
@@ -172,8 +165,8 @@ class Stokes(Solver):
         u0 = Function(P)
         p0 = Function(Z)
 
-        self.k = self.rho * self.U0 * self.L0 / self.mu
-        self.k = round(self.k,2)
+        # self.k = self.U0 * self.L0 / self.nu
+        # self.k = round(self.k,2)
         a = (1/self.dt)*inner(u,v)*dx + (1/self.k)*inner(grad(u), grad(v))*dx - div(v)*p*dx + q*div(u)*dx
         L = inner(f,v)*dx + (1/self.dt)*inner(u0,v)*dx
 
@@ -193,14 +186,14 @@ class Stokes(Solver):
             temp2 = Function(Z)
             temp2.vector()[:] = p0.vector()[:]
             self.pt[t] = temp2
-
+            
             if self.doplot:
                 self.plot_solution(u,p)
 
             t+=1
 
-        self.u = u*self.U0
-        self.p = p*self.rho*self.U0*self.U0
+        self.u = u
+        self.p = p
 
     def plot_solution(self, u, p):
         """
