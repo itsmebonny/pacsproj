@@ -32,7 +32,7 @@ cd pacsproj
 2. Activate the FEniCS environment
 3. Install the required packages using `pip install -r requirements.txt`
 4. Check if the installation was successful by running the script `python scripts/test_installation.py`
-5. Store the data path in a file called `data_location.txt`, which needs to be saved in `gNN/tools/`
+5. Store the `path/to/pacsproj/data` path in a file called `data_location.txt`, which needs to be saved in `gNN/tools/`
 
 ```bash
 cd data
@@ -46,7 +46,7 @@ The library is able to create meshes, solve variational problems, save them in a
 
 #### Mesh generation
 
-The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside the script, one can modify the variables `filename` and `output_dir` to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
+The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside the script, one can modify the variables `filename` (default: `mesh`) and `output_dir` (default: `data/mesh`) to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
 
 - `--nmesh`: number of meshes to generate;
 - `--interfaces`: number of the interfaces inside the mesh;
@@ -65,14 +65,19 @@ The library is built to solve the following problems:
 - Heat diffusion
 - Stokes problem
 
-There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The script is `scripts/HeatDatasetGen.py`. This script solves the problem and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the directory in which the mesh are stored modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem.
+There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The script is `scripts/HeatDatasetGen.py`. This script solves the problem and create the dataset. The Stokes problem solver is not implemented here as an executable script, in this case the user should refer to the `notebooks/StokesDatasetGen.ipynb` notebook.
 
 To run the script, the user can run the command
 
 ```python
-python scripts/HeatDatasetGen.py
+python scripts/HeatDatasetGen.py --args
 ```
 
+Where `args` are the parameters of the problem:
+
+- `--output_dir`: folder where to save the graphs (default: `data/graphs`);
+- `--mesh_dir`: folder where the mesh are saved (default: `data/mesh_train`);
+- `--ngraphs`: number of graphs to generate (default: 2);
 
 The class `MeshLoader` has a method `plot_mesh` that the user can use to see the mesh that is used to solve the problem.
 
@@ -80,7 +85,7 @@ The class `MeshLoader` has a method `plot_mesh` that the user can use to see the
 
 For further information, please refer to the `README.md` file inside the `gNN` folder.
 
-To train a gNN, the user can run the command
+The script can be found in `gNN/network1d/training.py`. This script trains a GNN on the data generated before. To train a gNN, the user can run the command
 
 ```python
 python gNN/network1d/training.py --args
@@ -88,7 +93,7 @@ python gNN/network1d/training.py --args
 
 Inside the `main` function, the user can modify the following variables:
 
-- `graphs_folder`: path to the folder containing the graphs;
+- `graphs_folder`: path to the folder containing the graphs (default: `data/graphs_train`). Use the default setting to train the model on a large dataset already generated;
 - `target_features`: features to predict;
 - `nodes_features`: features of the nodes;
 - `edges_features`: features of the edges;
@@ -119,15 +124,19 @@ The user can modify the parameters of the training in the `main` function by add
 To test a GNN, the user can run the command
 
 ```python
-python gNN/network1d/tester.py $MODELPATH
+python gNN/network1d/tester.py --args
 ```
 
-where `$MODELPATH` is the path to the folder containing the trained model. The script will compute the errors for all the train and test geometries.
+where `args` are the parameters of the test. The parameters are:
+
+- `--path`: path to the model folder (default: `models/trained_model`);
+- `--graphs_folder`: name of folder containing graphs (default: `graphs_train`);
+- `--data_location`: location of the "data" folder (default: `data`). In most of the cases, the default setting is fine.
 
 If the user wants to test an already trained model, he can use the model that is already present in the `models` folder. In that case, simply run the command
 
 ```python
-python gNN/network1d/tester.py models/trained_model
+python gNN/network1d/tester.py
 ```
 
 ### Notebooks
@@ -151,4 +160,3 @@ The documentation of the library is available in the `documentation.pdf` file. I
 
 - Andrea Bonifacio
 - Sara Gazzoni
-

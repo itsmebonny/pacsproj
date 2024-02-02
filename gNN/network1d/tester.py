@@ -34,6 +34,7 @@ import pathlib
 from network1d.rollout import rollout
 import tools.plot_tools as pt
 import matplotlib.pyplot as plt
+import argparse
 
 
 def evaluate_all_models(dataset, split_name, gnn_model, params, doplot = False):
@@ -268,9 +269,17 @@ argument. This is typically located in 'models/' after launching
 'network1d/training.py'.
 """
 if __name__ == '__main__':
-    path = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', type=str, help='Path to the model folder', type=str, default='models/trained_model')
+    parser.add_argument('--graphs_folder', type=str, default='graphs_train', help='Name of folder containing graphs')
+    parser.add_argument('--data_location', type=str, default='data', help='Location of the "data" folder.')
 
-    dataset, gnn_model, params = get_dataset_and_gnn(path)
+    args = parser.parse_args()
+    path = args.path
+    graphs_folder = args.graphs_folder
+    data_location = args.data_location
+
+    dataset, gnn_model, params = get_dataset_and_gnn(path, graphs_folder, data_location)
 
     if os.path.exists('results'):
         shutil.rmtree('results')
