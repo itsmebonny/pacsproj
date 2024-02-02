@@ -638,14 +638,14 @@ Finally, there is the \texttt{ModelTester.ipynb} which can be used to evaluate a
 
 Here we describe the instructions to run the whole code from data generation to the training and testing of the network. For a more detailed description of the running instructions, please refer to the \texttt{README.md} file in the repository.
 
-To run the code and reproduce the results presented in Section \ref{results}, it is necessary to run the \texttt{ModelTester.ipynb} notebook. The path to our trained model and to the dataset that we used are already specified in the notebook, so it is not necessary to change them. It is possible to plot the predictions of the model on different graphs from the training and the test set just changing the index of the graph to plot. Then, the model's predictions on new graphs can be plotted just specifying the filename of a new graph and the folder where it is stored, some examples that can be tested are already specified in the notebook. 
+To run the code and reproduce the results presented in Section \ref{results}, related to the testing of the GNN, it is necessary to run the \texttt{ModelTester.ipynb} notebook. The path to our trained model and to the dataset that we used are already specified in the notebook, so it is not necessary to change them. It is possible to plot the predictions of the model on different graphs from the training and the test set just changing the index of the graph to plot. Then, the model's predictions on new graphs can be plotted just specifying the filename of a new graph and the folder where it is stored, some examples that can be tested are already specified in the notebook. 
 
 Another possibility is to generate new meshes and new graphs, using the \texttt{MeshUtils.py} file and the \texttt{HeatDatasetGen.ipynb} notebook. 
+
 First, new meshes can be created running the \texttt{main} function of the \texttt{MeshUtils.py} file from command-line. All the parameters that can be modified are listed in Table \ref{args} and they can be specified as command-line arguments. The directory where the meshes are saved and the mesh names can be modified in the \texttt{main} function. 
 Then, the \texttt{HeatDatasetGen.ipynb} notebook can be used to generate a new dataset of graphs. It is necessary to specify the path to the folder containing the meshes, the path to the folder where the graphs have to be saved and the number of graphs to generate. Also, all the parameters of the variational problem can be modified in the notebook. 
 Following these instructions, it is possible to evaluate the trained model on the new graphs generated using the \texttt{ModelTester.ipynb} notebook and specifying the name of the new graphs folder and the name of the graph to evaluate. Notice that it is necessary that the new graphs directory is inside the \texttt{data} folder.
 
-For more details about the running instructions, to know about the packages required and for the training instructions, please refer to the README file in the repository.
 
 %-----------------------------------------------------------------------------
 % Results
