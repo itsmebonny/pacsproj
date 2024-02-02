@@ -270,7 +270,7 @@ argument. This is typically located in 'models/' after launching
 """
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, help='Path to the model folder', type=str, default='models/trained_model')
+    parser.add_argument('--path', type=str, help='Path to the model folder', default='models/trained_model')
     parser.add_argument('--graphs_folder', type=str, default='graphs_train', help='Name of folder containing graphs')
     parser.add_argument('--data_location', type=str, default='data', help='Location of the "data" folder.')
 

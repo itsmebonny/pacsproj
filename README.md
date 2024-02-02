@@ -46,7 +46,7 @@ The library is able to create meshes, solve variational problems, save them in a
 
 #### Mesh generation
 
-The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside the `main` function of the script, one can modify the variables `filename` (default: `mesh`) and `output_dir` (default: `data/mesh`) to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
+The user can generate a mesh using the script `scripts/MeshUtils.py`. Inside its `main` function, one can modify the variables `filename` (default: `mesh`) and `output_dir` (default: `data/mesh`) to choose the name of the mesh and the directory where to save it. Then, the user can run the command `python scripts/MeshUtils.py --args` where `args` are the various parameters that can be modified to generate the meshes. The parameters are:
 
 - `--nmesh`: number of meshes to generate;
 - `--interfaces`: number of the interfaces inside the mesh;
@@ -65,7 +65,7 @@ The library is built to solve the following problems:
 - Heat diffusion
 - Stokes problem
 
-There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The script is `scripts/HeatDatasetGen.py`. This script solves the problem and create the dataset. The Stokes problem solver is not implemented here as an executable script, in this case the user should refer to the `notebooks/StokesDatasetGen.ipynb` notebook.
+There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared a script to generate the data for the heat problem called `scripts/HeatDatasetGen.py`. The Stokes problem solver is not implemented here as an executable script, in this case the user should refer to the `notebooks/StokesDatasetGen.ipynb` notebook.
 
 To run the script, the user can run the command
 
@@ -79,13 +79,13 @@ Where `args` are the parameters of the problem:
 - `--mesh_dir`: folder where the mesh are saved (default: `data/mesh_train`);
 - `--ngraphs`: number of graphs to generate (default: 2);
 
-The class `MeshLoader` has a method `plot_mesh` that the user can use to see the mesh that is used to solve the problem.
+The class `MeshLoader` has a method `plot_mesh` that the user can call to see the mesh that is used to solve the problem.
 
 #### GNN training
 
 For further information, please refer to the `README.md` file inside the `gNN` folder.
 
-The script can be found in `gNN/network1d/training.py`. This script trains a GNN on the data generated before. To train a gNN, the user can run the command
+The script can be found in `gNN/network1d/training.py`. It trains a GNN on the data generated before. To use it, run the command
 
 ```python
 python gNN/network1d/training.py --args
@@ -130,7 +130,7 @@ python gNN/network1d/tester.py --args
 where `args` are the parameters of the test. The parameters are:
 
 - `--path`: path to the model folder (default: `models/trained_model`);
-- `--graphs_folder`: name of folder containing graphs (default: `graphs_train`);
+- `--graphs_folder`: name of folder containing graphs (default: `graphs_train`). This MUST be changed accordingly if the model is not the default one;
 - `--data_location`: location of the "data" folder (default: `data`). In most of the cases, the default setting is fine.
 
 If the user wants to test an already trained model, he can use the model that is already present in the `models` folder. In that case, simply run the command
@@ -150,7 +150,12 @@ To facilitate the use of the library, we prepared some notebooks that show how t
 These notebooks can be used out of the box, without any modification by simply running all the cells. The dataset generation notebooks work the same as the scripts already presented, so the interested reader can refer to the previous sections for further information.
 The notebook that solves Stokes is here just as a proof of concept, as it should need a few tweaks in order to solve the problem correctly.
 
-The model tester notebook shows how to test a model on the train and test geometries. The user can modify the variable `path` to choose the model to test. The notebook will compute the errors for all the train and test geometries. It is also possible to test the network on a single geometry by modifying the variable `graphs_folder` to the path of the folder containing the graphs of the geometry to test and the variable `new_graph` to the name of the graph to test.
+The model tester notebook is provided to work on the `trained_model` that is already present in the `models` folder. In that case is enough to run all the cells to see the results of the model on the train and test geometries. In the case a user wanted to test a different model, he should change the following variables:
+
+1. In the section `Load the model` the variable `path` must be the same of the model trained, while the variable `graphs_folder` must be the same of the folder containing the graphs used to train the model. 
+2. The section`Compute rollout errors on the train and test sets` can be left as it is.
+3. The section `Test the model on a single graph of the dataset` the user can change the variable `split` to choose whether to select a graph from the train or test set and the variable `graph_idx` to choose the graph to test.
+4. In the section `Test the model on a new graph` the user can select a folder of graphs never seen by the model changing the variable `graphs_folder` to the desired path and the variable `new_graph` to the filename of the graph to test.
 
 ### Documentation
 
