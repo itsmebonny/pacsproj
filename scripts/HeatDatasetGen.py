@@ -11,15 +11,15 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Generate heat dataset')
 parser.add_argument('--ngraphs', type=int, default=2)
-parser.add_argument('--output_dir', type=str, default="data/graphs/")
-parser.add_argument('--mesh_dir', type=str, default="data/mesh/")
+parser.add_argument('--output_dir', type=str, default="data/graphs")
+parser.add_argument('--mesh_dir', type=str, default="data/mesh_train")
 
 args = parser.parse_args()
 
 ngraphs = args.ngraphs  # number of graphs to generate
 output_dir = args.output_dir   # output directory for graphs 
 mesh_dir = args.mesh_dir # directory for mesh files
-mesh_info = json.load(open(mesh_dir + 'mesh_info.json'))
+mesh_info = json.load(open(mesh_dir + '/mesh_info.json'))
 mesh_name = mesh_info['mesh_name']
 nmesh = mesh_info['nmesh']
 nodes = mesh_info['interfaces']
@@ -36,7 +36,7 @@ kmin = 1   # minimum thermal conductivity
 
 for i in range(ngraphs):
     imesh = np.random.randint(0,nmesh)
-    mesh_load = mutil.MeshLoader(mesh_dir + mesh_name + f"_{imesh}")
+    mesh_load = mutil.MeshLoader(f"{mesh_dir}/{mesh_name}_{imesh}")
     mesh = mesh_load.mesh
     bounds = mesh_load.bounds
     face = mesh_load.face

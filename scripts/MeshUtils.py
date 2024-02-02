@@ -78,7 +78,7 @@ class MeshCreator:
             points = []
 
             # add points 
-            for i in range(self.nodes):
+            for i in range(self.interfaces):
                 h = round(np.random.uniform(self.hmin, self.hmax),2)
                 points += [gmsh.model.geo.addPoint(wold, -h, 0, self.lc)]
                 points += [gmsh.model.geo.addPoint(wold, h, 0, self.lc)]
@@ -117,7 +117,8 @@ class MeshCreator:
             gmsh.model.geo.synchronize()
             gmsh.model.mesh.generate()
             gmsh.option.setNumber("Mesh.MshFileVersion",2.2)
-            gmsh.write(output_dir + "/" + filename + f"_{it}.msh")
+            filepath = os.path.join(output_dir, f"{filename}_{it}.msh")
+            gmsh.write(filepath)
             gmsh.finalize()
 
             self.create_info_file(output_dir, filename)
@@ -275,7 +276,7 @@ and the output directory and the filename can be set in the main function.
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Mesh creation')
-    parser.add_argument('--interfaces', help='number of nodes', type=int, default=5)
+    parser.add_argument('--interfaces', help='number of interfaces', type=int, default=5)
     parser.add_argument('--lc', help='mesh size', type=float, default=0.1)
     parser.add_argument('--hmax', help='max height of the domain', type=float, default=5.0)
     parser.add_argument('--hmin', help='min height of the domain', type=float, default=0.5)
@@ -286,8 +287,8 @@ if __name__ == "__main__":
     parser.add_argument('--wmin', help='min node distance', type=float, default=1.0)
     args = parser.parse_args()
 
-    filename = "test_mesh"
-    output_dir = "data/mesh_test/"
+    filename = "mesh"
+    output_dir = "data/mesh"
 
     mesh_creator = MeshCreator(args)
     mesh_creator.create_mesh(filename, output_dir)

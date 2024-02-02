@@ -83,7 +83,7 @@ def add_field(graph, field, field_name, offset=0):
     graph.ndata["T"] = th.reshape(
         th.ones(graph.num_nodes(), dtype=th.float32) * T, (-1, 1, 1))
         
-def save(graph, filename, output_dir = "../data/graphs/"):
+def save(graph, filename, output_dir = "../data/graphs"):
     """
     Save graph to disk as a DGL graph.
 
@@ -92,6 +92,6 @@ def save(graph, filename, output_dir = "../data/graphs/"):
         filename (string): name of the file
         output_dir (string): path to output directory
     """
-    
-    dgl.save_graphs(output_dir+filename+".grph", graph)
+    filepath = os.path.join(output_dir, filename)
+    dgl.save_graphs(f"{filepath}.grph", graph)
     print("Graph saved to disk.")

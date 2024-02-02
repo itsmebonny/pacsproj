@@ -36,7 +36,7 @@ cd pacsproj
 
 ```bash
 cd data
-echo $(pwd) > gNN/tools/data_location2.txt
+echo $(pwd) > ../gNN/tools/data_location.txt
 cd ..
 ```
 
@@ -65,7 +65,7 @@ The library is built to solve the following problems:
 - Heat diffusion
 - Stokes problem
 
-There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The scripts are `scripts/HeatDatasetGen.py` and `scripts/StokesDatasetGen.py`. These two scripts solve the two problems and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the directory in which the mesh are stored modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem.
+There is an abstract class `Solver` that the user can extend to solve other variational problems. We prepared two scripts to generate the data for the two problems mentioned above. The scripts are `scripts/HeatDatasetGen.py` and `scripts/StokesDatasetGen.py`. These two scripts solve the two problems and create the dataset. As for the section above, it is possible to modify the output directory which is stored in the variable `output_dir`, the directory in which the mesh are stored modifying the variable `mesh_dir` and the number of samples to generate which is stored in the variable `ngraphs`. In the same cell the user can modify the parameters of the problem. The script that solves Stokes is here just as a proof of concept, as it should need a few tweaks in order to solve the problem correctly.
 
 To run the script, the user can run the command
 
@@ -73,11 +73,6 @@ To run the script, the user can run the command
 python scripts/HeatDatasetGen.py
 ```
 
-or
-
-```python
-python scripts/StokesDatasetGen.py
-```
 
 The class `MeshLoader` has a method `plot_mesh` that the user can use to see the mesh that is used to solve the problem.
 

@@ -67,10 +67,7 @@ class Stokes(Solver):
         mesh (Mesh): Mesh object.
         V (FunctionSpace): Velocity function space.
         Q (FunctionSpace): Pressure function space.
-        rho (float): Density of the fluid.
-        mu (float): Dynamic viscosity of the fluid.
-        U0 (float): Characteristic velocity of the fluid.
-        L0 (float): Characteristic length of the fluid.
+        Re (float): Reynolds number.
         inflow (float): Inflow rate of the fluid.
         f (Expression): Source term.
         dt (float): Time step.
@@ -90,10 +87,7 @@ class Stokes(Solver):
         Args:
             V (FunctionSpace): Velocity function space.
             Q (FunctionSpace): Pressure function space.
-            rho (float): Density of the fluid.
-            mu (float): Dynamic viscosity of the fluid.
-            U0 (float): Characteristic velocity of the fluid.
-            L0 (float): Characteristic length of the fluid.
+            Re (float): Reynolds number.
             inflow (float): Inflow rate of the fluid.
             f (Expression): Source term.
             dt (float): Time step.
@@ -117,15 +111,13 @@ class Stokes(Solver):
         Set the parameters for the simulation.
 
         Args:
-            V (float): Velocity of the fluid.
-            Q (float): Flow rate of the fluid.
-            nu (float): Kynematic viscosity of the fluid.
-            U0 (float): Initial velocity of the fluid.
-            L0 (float): Initial length of the fluid.
+            V (FunctionSpace): Velocity function space.
+            Q (FunctionSpace): Pressure function space.
+            Re (float): Reynolds number.
             inflow (float): Inflow rate of the fluid.
-            f (float): Force applied to the fluid.
-            dt (float): Time step for the simulation.
-            T (float): Total time for the simulation.
+            f (Expression): Source term.
+            dt (float): Time step.
+            T (float): Final time.
         """
         self.V = V
         self.Q = Q
@@ -244,7 +236,8 @@ class Heat(Solver):
             dt (float): Time step.
             T (float): Final time.
             g (Expression): Neumann boundary condition at the inlet.
-            doplot (bool): Flag indicating whether to plot the solution at each time step.
+            doplot (bool): Flag indicating whether to plot
+                           the solution at each time step.
         """
 
         super().__init__(mesh)
@@ -674,7 +667,7 @@ class DataNS(DataGenerator):
         self.TDNodesData = [td_dict_u, td_dict_p]
         return td_dict_u, td_dict_p
 
-    def save_graph(self, output_dir):
+    def save_graph(self, output_dir = "../data/graphs"):    
         """
         Saves the graph in a specified directory.
 
@@ -686,7 +679,7 @@ class DataNS(DataGenerator):
         """
         return super().save_graph(output_dir,self.target_fields)
     
-    def generate_json(self,output_dir):
+    def generate_json(self,output_dir = "../data/graphs"):
         """
         Generate JSON file containing information about the dataset.
 
@@ -780,7 +773,7 @@ class DataHeat(DataGenerator):
         self.TDNodesData = [td_dict]
         return td_dict
     
-    def save_graph(self, output_dir):
+    def save_graph(self, output_dir = "../data/graphs"):
         """
         Saves the graph in a specified directory.
 
@@ -790,9 +783,9 @@ class DataHeat(DataGenerator):
         Args:
             output_dir: The directory to save the graph in.
         """
-        return super().save_graph(output_dir,self.target_fields)
+        return super().save_graph(output_dir, self.target_fields)
 
-    def generate_json(self,output_dir):
+    def generate_json(self,output_dir = "../data/graphs"):
         """
         Generate JSON file containing information about the dataset.
 
@@ -802,4 +795,4 @@ class DataHeat(DataGenerator):
         Arguments:
             output_dir (string): path to output directory
         """
-        return super().generate_json(output_dir,self.model_type)
+        return super().generate_json(output_dir, self.model_type)

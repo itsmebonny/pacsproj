@@ -1,10 +1,10 @@
 data/*
-!data/graphs
-!data/graphs/*
+!data/graphs_train
+!data/graphs_train/*
 !data/graphs_new
 !data/graphs_new/*
-!data/mesh
-!data/mesh/*
+!data/mesh_train
+!data/mesh_train/*
 models/*
 !models/model_trained
 !models/model_trained/*

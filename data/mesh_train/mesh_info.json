@@ -1,0 +1,11 @@
+{
+  "nmesh": 20,
+  "hmax": 5.0,
+  "hmin": 0.5,
+  "lc": 0.1,
+  "wmax": 5.0,
+  "wmin": 1.0,
+  "spacing": false,
+  "interfaces": 5,
+  "mesh_name": "RandomMesh"
+}
