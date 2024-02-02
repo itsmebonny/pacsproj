@@ -143,6 +143,10 @@ The notebook that solves Stokes is here just as a proof of concept, as it should
 
 The model tester notebook shows how to test a model on the train and test geometries. The user can modify the variable `path` to choose the model to test. The notebook will compute the errors for all the train and test geometries. It is also possible to test the network on a single geometry by modifying the variable `graphs_folder` to the path of the folder containing the graphs of the geometry to test and the variable `new_graph` to the name of the graph to test.
 
+### Documentation
+
+The documentation of the library is available in the `documentation.pdf` file. It is also possible to generate the documentation by running the command `doxygen Doxyfile` in the root folder of the repository.
+
 ### Authors
 
 - Andrea Bonifacio

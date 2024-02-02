@@ -25,6 +25,7 @@ import torch as th
 import graph1d.generate_normalized_graphs as gng
 import graph1d.generate_dataset as dset
 import tools.io_utils as io
+import time
 from network1d.meshgraphnet import MeshGraphNet
 import json
 import shutil
@@ -184,14 +185,15 @@ def plot_predictions(dataset, split_name, gnn_model, params, graph_idx=-1):
     N = len(dataset.graphs)
     if graph_idx == -1 or graph_idx >= N:
         graph_n = np.random.uniform(0,N, 1).astype(int)[0]
-    graph_n = graph_idx
+    else:
+        graph_n = graph_idx
     k = dataset.graphs[graph_n].ndata['k'][0][0][0]
     rfc, errs_normalized, \
         errs, _, _ = rollout(gnn_model, params, dataset.graphs[graph_n])
     # r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params['statistics'], 'labels')
     true_data =gng.invert_normalize(dataset.graphs[graph_n].ndata['nfeatures'][:,0,:],'flux', params['statistics'], 'labels')
 
-    print('k = ', k)
+    print('k = ', round(k.item(), 2))
     for node in range(1,4):
         plt.plot(rfc[node,0,:], label = 'pred', linewidth = 3)
         plt.plot(true_data[node,:], label = 'real', linewidth = 3, linestyle = '--')
@@ -235,16 +237,17 @@ def test_new_graphs(path, graph_name, graphs_folder = 'graphs_new', data_locatio
     features = {'nodes_features': nodes_features, 
                 'edges_features': edges_features,
                 'target_features': target_features}
-    info = json.load(open(data_location + graphs_folder + 'dataset_info.json'))
-    graphs, params2  = gng.generate_normalized_graphs(data_location + graphs_folder,
+    pathgraphs = os.path.join(data_location, graphs_folder)
+    info = json.load(open(pathgraphs + '/dataset_info.json'))
+    graphs, params2  = gng.generate_normalized_graphs(pathgraphs,
                                                 gnn_params['statistics']['normalization_type'],
                                                 gnn_params['bc_type'],
                                                 {'dataset_info' : info, 'types_to_keep': []}, features=features)
     
     params2['nout'] = gnn_params['nout']
     
-    rfc, errs_normalized, \
-            errs, diff, elaps = rollout(gnn_model, params2, graphs[graph_name])
+    rfc, _, \
+            errs, __, ___ = rollout(gnn_model, params2, graphs[graph_name])
     # r_features[:,0,:] = gng.invert_normalize(r_features[:,0,:],'flux', params2['statistics'], 'labels')
     true_data =gng.invert_normalize(graphs[graph_name].ndata['nfeatures'][:,0,:],'flux', params2['statistics'], 'labels')
     
