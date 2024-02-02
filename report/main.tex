@@ -170,7 +170,7 @@
 %-----------------------------------------------------------------------------
 
 \section{Introduction}
-Full 3D blood flow models are important in the study of the cardiovascular system since they allow one to extract detailed quantities of interest, but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this field because of their efficiency. An example is presented in \cite{Luca}, where a one-dimensional reduced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider the heat equation as test case, but the goal of the project is to show the potential extension of this approach to solve more difficult problems with complex geometries such as the simulations of proteins spreading in the neural system, which are at the basis of neurodegenerative diseases \cite{MattiaCorti}. The main part of this project is the implementation of a library for data generation used to train the graph neural network, and the adaptation of the code\footnote{The code can be found \href{https://github.com/StanfordCBCL/gROM}{here}.} used in \cite{Luca} to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
+Full 3D blood flow models are important in the study of the cardiovascular system since they allow one to extract detailed quantities of interest, but their actual implementation is limited due to their high computational cost. For this reason, reduced order models are widely used in this field because of their efficiency \cite{Formaggia_Quarteroni_Veneziani_2009}. An example is presented in \cite{Luca}, where a one-dimensional reduced order model is implemented to simulate the blood flow in the aorta using a graph neural network trained on three-dimensional simulations. In this work we propose a different application, where the graph neural network is used to approximate the solution of different problems. In particular, we consider the heat equation as test case, but the goal of the project is to show the potential extension of this approach to solve more difficult problems with complex geometries such as the simulations of proteins spreading in the neural system, which are at the basis of neurodegenerative diseases \cite{MattiaCorti}. The main part of this project is the implementation of a library for data generation used to train the graph neural network, and the adaptation of the code\footnote{The code can be found \href{https://github.com/StanfordCBCL/gROM}{here}.} used in \cite{Luca} to make it suitable for our specific test case. In the following sections, we first present the problem formulation and a detailed description of the code developed, then we show the results obtained and a discussion of the possible further developments and extensions.
 
 %-----------------------------------------------------------------------------
 % Problem
@@ -203,7 +203,7 @@ The final two steps of the workflow are related to the training and the testing 
 The graph neural network considered in this project is the one proposed in \cite{Luca}, which is based on MeshGraphNet.
 MeshGraphNet is an innovative framework proposed by the Deepmind team to predict mesh-based simulation, in \cite{MeshGraphNet} it is used to predict cloth dynamics or structural deformation. In \cite{Luca} the idea is modified to be applied to graph reduction of 3D blood vessels. In this work, we follow the second adaptation and modify it to be able to work on any kind of graph-based representation of a mesh.
 
-We first focus on a brief description of how the graph neural network works, and then on the main characteristic of the training and testing phases.
+We first focus on a brief description of how the graph neural network works, and then on the main characteristic of the training and testing phases. Graph neural networks (GNNs) are neural models that capture the dependence of graphs via message passing between the nodes of graphs. They can be used for a wide range of tasks, from traffic state prediction to protein interface prediction \cite{Zhou_Cui_Hu_Zhang_Yang_Liu_Wang_Li_Sun_2021}.
 
 The GNN is applied iteratively: at each time step it takes as input the system state \(\Theta^{n}\), which is the set of the target features at that time step, and it predicts an update for the state variables (rollout phase). The prediction is combined with the previous time step to estimate \(\Theta^{n+1}\). 
 A forward step of the GNN is composed by three stages:
@@ -235,7 +235,7 @@ Another quantity considered during the trining is the metric, which is a strided
 \end{equation}
 where the notation is the same as in Equation \eqref{mse}.
 
-In addition, during the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network and we have hyperparameters to control the rate of the noise. 
+In addition, during the training, the state variables are perturbed with random noise to simulate the error caused by the network's predictions, this is done to improve the robustness of the network, and we have hyperparameters to control the rate of the noise. 
 It is important to make the graph neural network robust for rollouts of many time steps, since the error generated by the predictions is propagated at each time step. 
 For this reason, also a rollout error is considered during the training, which is defined as:
 
@@ -402,7 +402,7 @@ To this purpose, we implemented a \texttt{Solver} class, which is located in the
 As we can notice from the scheme, there is an abstract base class \texttt{Solver} which has two child classes: \texttt{Heat} and \texttt{Stokes}, that are used to solve the heat equation and the Stokes equation respectively. 
 In the code \ref{solver} we show the definition of the parent class, were we can observe a constructor and three abstract methods. In particular, the constructor takes as input a \texttt{MeshLoader} object, which is useful to load the mesh considered in the problem to solve. The abstract methods are used to set the parameters of the problem, to solve it and to plot the solution, and they are all implemented in the child classes.
 
-\begin{lstlisting}[language=Python, caption={Solver class.}, label={solver}]
+\begin{lstlisting}[language=Python, caption={Solver abstract class.}, label={solver}]
     class Solver(ABC):
     
         def __init__(self,mesh):
@@ -446,7 +446,7 @@ When the variational problem is solved and the solution are saved, the next step
 Also in this case, we have an abstract base class \texttt{DataGenerator} which has two child classes: \texttt{DataHeat} and \texttt{DataNS}, that are used to generate and store the data for the heat equation and the Stokes equation respectively.
 The \texttt{DataGenerator} base class contains some abstract method that will be overridden in the child classes, their definition is shown in the code \ref{datagenerator}, together with the class constructor. We can observe that the constructor takes as input a \texttt{Solver} object and a \texttt{MeshLoader} object and a \texttt{NNodes} attribute which is set as the sum of the number of inlets, outlets and interfaces of the mesh. The abstract method are used to compute some quantities of interest of the problem and to store the time dependent features, but they will be described in detail later.
 
-\begin{lstlisting}[language=Python, caption={Solver class.}, label={datagenerator}]
+\begin{lstlisting}[language=Python, caption={Data generator abstract class.}, label={datagenerator}]
     class DataGenerator(ABC):
 
         def __init__(self, solver, mesh):
@@ -493,7 +493,7 @@ Now we can focus on the child classes and on the abstract methods.
 As for the \texttt{Solver} class, the abstract methods are overridden in the two child classes \texttt{DataNS} and \texttt{DataHeat}. 
 As above, we focus on the description of the \texttt{DataHeat} class, since it is the one used in the test case, but the \texttt{DataNS} class is implemented analogously. 
 
-First of all, the constructor of this child class is inherited from the parent class and two additional attributes are introduced: \texttt{model\_type} and \texttt{target\_fields}. The first one is a string containing the name of the equation considered, which is 'heat' in this case. The second one is a list containing the name of the target features of the graph (which are the features that the GNN has to predict). In this case the list contains only the string 'flux'. The constructor definition is shown in Code \ref{dataheat_constructor}.
+First, the constructor of this child class is inherited from the parent class and two additional attributes are introduced: \texttt{model\_type} and \texttt{target\_fields}. The first one is a string containing the name of the equation considered, which is 'heat' in this case. The second one is a list containing the name of the target features of the graph (which are the features that the GNN has to predict). In this case the list contains only the string 'flux'. The constructor definition is shown in Code \ref{dataheat_constructor}.
 
 \begin{lstlisting}[language=Python, caption={Solver class.}, label={dataheat_constructor}]
     def __init__(self, solver, mesh):
@@ -539,7 +539,7 @@ So, thanks to the implementation explained above, a dataset can be generate and 
 \label{gnn}
 
 In this section we describe the code of the graph neural network, located in the \texttt{gNN} folder. This part of the code refers to the last two blocks of the our wotkflow, which are the training and the testing of the network.
-Since the code was already implemented and we just made some modifications, we will not describe it in detail, but we will focus on the changes we made and on the more relevant parts of the code, which are inside the \texttt{network1D} folder.
+Since the code was already implemented, and we just made some modifications, we will not describe it in detail, but we will focus on the changes we made and on the more relevant parts of the code, which are inside the \texttt{network1D} folder.
 
 \subsubsection*{Code Structure}
 To better understand the behavior of the network, it is necessary to look at its inner mechanisms. 
@@ -568,7 +568,7 @@ The method inside this class are the following:
 
 Here we describe the training process more in detail. The process is done using the \texttt{training.py} file and the \texttt{rollout.py} file. The first one is used to perform the steps necessary to train the network, like backpropagation and loss computation, while the second one is used to perform the forward step of the network and compute the predictions.
 
-The training of the network starts with the definition of its hyperparameters described in Table \ref{hyperparams_description}. In particular, the first four parameters are the ones that define the network architecture, as explained in the previous section. The \texttt{rate\_noise} and \texttt{rate\_noise\_features} parameters are related to the noise that is added to the system state during the training process, to make the model more robust. The first parameters listed in this table are the one from the original implementation, but we added three more to make the network more flexible: a \texttt{n\_nout} parameter that defines the number of outputs of the network (and it must be equal to the number of target features), a \texttt{bc\_type} which is a string that defines the type of boundary condition that has to be imposed (e.g. 'heat' in our test case) and the \texttt{optimizer} parameter which allows the user to choose the optimizer to use during the training process.
+The training of the network starts with the definition of its hyperparameters described in Table \ref{hyperparams_description}. In particular, the first four parameters are the ones that define the network architecture, as explained in the previous section. The \texttt{rate\_noise} and \texttt{rate\_noise\_features} parameters are related to the noise that is added to the system state during the training process, to make the model more robust. The first parameters listed in this table are the one from the original implementation, but we added three more to make the network more flexible: a \texttt{n\_nout} parameter that defines the number of outputs of the network (and it must be equal to the number of target features), a \texttt{bc\_type} which is a string that defines the type of boundary condition that has to be imposed (e.g. 'heat' in our test case) and the \texttt{optimizer} parameter which allows the user to choose the optimizer to use during the training process. The default optimizer is Adam \cite{Kingma_Ba_2017}, which we found to be the best for our problem.
 
 \begin{table}[H]
 \centering
@@ -636,10 +636,12 @@ Finally, there is the \texttt{ModelTester.ipynb} which can be used to evaluate a
 
 \section{Running instructions}
 
-To run the code and reproduce the results presented in Section \ref{results}, it necessary to run the \texttt{ModelTester.ipynb} notebook. The path to our trained model and to the dataset that we used are already specified in the notebook, so it is not necessary to change them. It is possible to plot the predictions of the model on different graphs from the training and the test set just changing the index of the graph to plot. Then, the model's predictions on new graphs can be plotted just specifying the filename of a new graph and the folder where it is stored, some examples that can be tested are already specified in the notebook. 
+Here we describe the instructions to run the whole code from data generation to the training and testing of the network. For a more detailed description of the running instructions, please refer to the \texttt{README.md} file in the repository.
+
+To run the code and reproduce the results presented in Section \ref{results}, it is necessary to run the \texttt{ModelTester.ipynb} notebook. The path to our trained model and to the dataset that we used are already specified in the notebook, so it is not necessary to change them. It is possible to plot the predictions of the model on different graphs from the training and the test set just changing the index of the graph to plot. Then, the model's predictions on new graphs can be plotted just specifying the filename of a new graph and the folder where it is stored, some examples that can be tested are already specified in the notebook. 
 
 Another possibility is to generate new meshes and new graphs, using the \texttt{MeshUtils.py} file and the \texttt{HeatDatasetGen.ipynb} notebook. 
-First of all, new meshes can be created running the \texttt{main} function of the \texttt{MeshUtils.py} file from command-line. All the parameters that can be modified are listed in Table \ref{args} and they can be specified as command-line arguments. The directory where the meshes are saved and the mesh names can be modified in the \texttt{main} function. 
+First, new meshes can be created running the \texttt{main} function of the \texttt{MeshUtils.py} file from command-line. All the parameters that can be modified are listed in Table \ref{args} and they can be specified as command-line arguments. The directory where the meshes are saved and the mesh names can be modified in the \texttt{main} function. 
 Then, the \texttt{HeatDatasetGen.ipynb} notebook can be used to generate a new dataset of graphs. It is necessary to specify the path to the folder containing the meshes, the path to the folder where the graphs have to be saved and the number of graphs to generate. Also, all the parameters of the variational problem can be modified in the notebook. 
 Following these instructions, it is possible to evaluate the trained model on the new graphs generated using the \texttt{ModelTester.ipynb} notebook and specifying the name of the new graphs folder and the name of the graph to evaluate. Notice that it is necessary that the new graphs directory is inside the \texttt{data} folder.
 
@@ -651,11 +653,11 @@ For more details about the running instructions, to know about the packages requ
 
 \section{Results}
 \label{results}
-In this section we show the results on the test case described in the section \ref{testcase}. 
+In this section we show the results on the test case described in the section \ref{testcase}. It is important to keep in mind that every result presented in this section is obtained using a dataset in which we decided to restrict \(k\) to the range \([1,100]\). We made this choice during our development since we saw that, in our test case, for values of \(k\) greater than 100, the diffusivity constant is so high that the heat flux is almost constant and not dissimilar from the case in which \(k=100\). This choice was made to make the dataset more compact and to make the training process faster.
 In Figure \ref{loss} the performance of the model is shown in terms of loss and metric during the training. 
 The loss function considered is the one defined in equation \eqref{mse}, while the metric is the mean absolute error between the model's predictions and the real data. 
-Moreover, the rollout error's behavior is shown in Figure \ref{rollout_plot} and it is computed as in Equation \eqref{rollout} on a graph randomly selected in the dataset and at some random epochs. We can observe that the loss and the metric decreases during the training as expected, while the rollout error is not monotonically decreasing. This is due to the fact that the rollout error is computed on a single graph so it is not a good indicator of the model's performance.
-In Table \ref{errors} we show the final rollout errors on the training and the test set, which are computed as the average of the rollout errorr on all the graphs in the dataset.
+Moreover, the rollout error's behavior is shown in Figure \ref{rollout_plot} and it is computed as in Equation \eqref{rollout} on a graph randomly selected in the dataset and at some random epochs. We can observe that the loss and the metric decreases during the training as expected, while the rollout error is not monotonically decreasing. This is due to the fact that the rollout error is computed on a single graph, so it is not a good indicator of the model's performance.
+In Table \ref{errors} we show the final rollout errors on the training and the test set, which are computed as the average of the rollout error on all the graphs in the dataset.
 
 % immagini da aggiornare con quelle del modello finale
 \begin{figure}[H]
@@ -688,7 +690,7 @@ In Table \ref{errors} we show the final rollout errors on the training and the t
 \end{table}
 
 In Figures \ref{train} and \ref{test} we can see some example of the model's predictions on each internal node of a graph from the training and the test set respectively. We don't show the predictions on the inlet and the outlet nodes since they are imposed by the boundary conditions and not predicted by the model.
-In general, the model is able to predict the heat flux at the interfaces with good accuracy when we test it on graphs from the training and the test set. 
+In general, the model is able to reconstruct well the heat flux at the interfaces, according to the rollout error, which is always around \(10^-2\) when tested on graphs from the training and the test set. 
 
 \begin{figure}[H]
     \centering
@@ -726,9 +728,9 @@ This could be due to the fact that with a lower diffusivity constant the values 
 
 \begin{figure}[H]
     \centering
-    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node1_k67.44.png}}
-    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node2_k67.44.png}}
-    \subfloat[subcaption]{\includegraphics[width=0.3\textwidth]{Images/new_node3_k67.44.png}}
+    \subfloat[Heat flux at interface 1.]{\includegraphics[width=0.3\textwidth]{Images/new_node1_k67.44.png}}
+    \subfloat[Heat flux at interface 2.]{\includegraphics[width=0.3\textwidth]{Images/new_node2_k67.44.png}}
+    \subfloat[Heat flux at interface 3.]{\includegraphics[width=0.3\textwidth]{Images/new_node3_k67.44.png}}
     \caption{Real heat flux at the interfaces predicted by the model on a new graph with diffusivity constant \(k=67.44\).}
     \label{new2}
 \end{figure}
